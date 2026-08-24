@@ -3,18 +3,16 @@
 import { useState } from "react";
 import { 
   Activity, 
-  AlertTriangle, 
-  CheckCircle2, 
   Clock, 
   MapPin, 
   Sparkles, 
   ArrowRight, 
   PackageX, 
-  UserCheck, 
-  Timer,
   LayoutGrid,
   SearchCode,
-  ArrowLeft
+  ArrowLeft,
+  ShieldCheck,
+  AlertTriangle
 } from "lucide-react";
 import { 
   ResponsiveContainer, 
@@ -47,7 +45,7 @@ export default function TheatresPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-8">
-      {/* 1. Top Section & Tab Controls */}
+      {/* 1. Page Header & Master/Detail Tab Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
         <div>
           <div className="text-xs text-slate-500 font-mono flex items-center gap-1.5 mb-1">
@@ -106,17 +104,17 @@ export default function TheatresPage() {
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
               <span className="text-xs text-slate-500 font-medium">Average Segregation Rate</span>
               <p className="text-2xl font-bold text-amber-700 font-mono mt-1">34.6% SCI</p>
-              <p className="text-[11px] text-slate-400 mt-1">Target: &lt; 25.0%</p>
+              <p className="text-[11px] text-slate-400 mt-1">Clinical Target: &lt; 25.0%</p>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <span className="text-xs text-slate-500 font-medium">Critical Priority Suites</span>
+              <span className="text-xs text-slate-500 font-medium">Critical Packaging Priority</span>
               <p className="text-2xl font-bold text-red-700 font-mono mt-1">2 Theatres</p>
-              <p className="text-[11px] text-red-600 font-medium mt-1">OT_03 Ortho, OT_04 Neuro</p>
+              <p className="text-[11px] text-red-600 font-bold mt-1">OT_03 Ortho, OT_04 Neuro</p>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <span className="text-xs text-slate-500 font-medium">Best Performing Suite</span>
+              <span className="text-xs text-slate-500 font-medium">Best Practice Benchmark</span>
               <p className="text-2xl font-bold text-emerald-700 font-mono mt-1">OT_09 (ENT)</p>
-              <p className="text-[11px] text-emerald-700 font-medium mt-1">13.8% Misclassification Rate</p>
+              <p className="text-[11px] text-emerald-700 font-bold mt-1">13.8% Misclassification Rate</p>
             </div>
           </div>
 
@@ -175,7 +173,7 @@ export default function TheatresPage() {
                       <td className="py-3.5 px-4 font-mono whitespace-nowrap">{t.totalWeightKg} kg</td>
                       <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap font-medium">{t.dominantPhase}</td>
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
                           t.status === "CRITICAL"
                             ? "bg-red-50 text-red-700 border-red-200"
                             : t.status === "WARNING"
@@ -216,10 +214,11 @@ export default function TheatresPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setActiveTab("MATRIX")}
-                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors"
+                className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1 text-xs font-semibold"
                 title="Back to All Theatres"
               >
                 <ArrowLeft className="w-4 h-4" />
+                <span>All OTs</span>
               </button>
               <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-800 font-mono font-bold text-sm shrink-0">
                 {activeProfile.theatreId}
@@ -230,13 +229,15 @@ export default function TheatresPage() {
                   <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
                     activeProfile.sciPercentage > 50
                       ? "bg-red-50 text-red-700 border-red-200"
-                      : "bg-amber-50 text-amber-700 border-amber-200"
+                      : activeProfile.sciPercentage > 30
+                      ? "bg-amber-50 text-amber-700 border-amber-200"
+                      : "bg-emerald-50 text-emerald-700 border-emerald-200"
                   }`}>
-                    {activeProfile.sciPercentage}% Misclassification
+                    {activeProfile.sciPercentage}% Misclassification Rate
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Lead Clinician: <strong>{activeProfile.surgeonInCharge}</strong> • Avg Turnover: <strong>{activeProfile.avgTurnoverTimeMin} min</strong>
+                  Lead Clinician: <strong>{activeProfile.surgeonInCharge}</strong> • Avg Turnover: <strong>{activeProfile.avgTurnoverTimeMin} min</strong> • Clinical Group: <strong>{activeProfile.theatreGroupType}</strong>
                 </p>
               </div>
             </div>
@@ -320,7 +321,11 @@ export default function TheatresPage() {
                       Hourly Waste Influx & Composition ({activeProfile.theatreId})
                     </h4>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Visual proof of clean plastic surge occurring during pre-incision sterile setup (07:30~09:00).
+                      {activeProfile.theatreGroupType === "HIGH_PACKAGING"
+                        ? "Visual proof of clean plastic surge occurring during pre-incision sterile setup (07:30~09:00)."
+                        : activeProfile.theatreGroupType === "RAPID_TURNOVER"
+                        ? "Visual proof of post-operative co-mingling surge during rapid turnover cleanup (15:30~17:00)."
+                        : "Stable, well-segregated baseline with low packaging misclassification."}
                     </p>
                   </div>
                   <div className="flex items-center gap-3 text-xs shrink-0">
@@ -376,7 +381,7 @@ export default function TheatresPage() {
                   High-Frequency Misclassified Disposables in {activeProfile.theatreId}
                 </h4>
                 <p className="text-xs text-slate-500">
-                  Itemized non-contaminated packaging frequently tossed into yellow biohazard bins during surgical setup.
+                  Itemized non-contaminated packaging frequently tossed into yellow biohazard bins during surgical workflow.
                 </p>
               </div>
             </div>

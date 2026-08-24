@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   DollarSign, 
   TrendingDown, 
@@ -9,8 +9,6 @@ import {
   ArrowDownRight, 
   ArrowUpRight,
   Sparkles,
-  Calendar,
-  Layers,
   ArrowRight,
   X
 } from "lucide-react";
@@ -25,7 +23,7 @@ import {
   CartesianGrid 
 } from "recharts";
 import { 
-  PERIOD_DATA_MAP 
+  getPeriodData 
 } from "@/lib/mock-data";
 import { formatCurrencyAUD, formatNumber } from "@/lib/utils";
 
@@ -33,16 +31,27 @@ export default function OverviewPage() {
   const [selectedPeriodKey, setSelectedPeriodKey] = useState("August 2026 (Live MTD)");
   const [showAllDeptsModal, setShowAllDeptsModal] = useState(false);
 
-  const currentStats = PERIOD_DATA_MAP[selectedPeriodKey] || PERIOD_DATA_MAP["August 2026 (Live MTD)"];
+  // Sync with global header period selector
+  useEffect(() => {
+    const handlePeriodChange = (e: any) => {
+      if (e.detail) {
+        setSelectedPeriodKey(e.detail);
+      }
+    };
+    window.addEventListener("surgiwaste:periodChange", handlePeriodChange);
+    return () => window.removeEventListener("surgiwaste:periodChange", handlePeriodChange);
+  }, []);
+
+  const currentStats = getPeriodData(selectedPeriodKey);
   const top3Depts = currentStats.departmentRatio.slice(0, 3);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-8">
-      {/* 1. Page Header with Clean Hierarchy */}
+      {/* 1. Clean Page Title (Redundant Period Selector Removed) */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
         <div>
           <div className="text-xs text-slate-500 font-mono flex items-center gap-1.5 mb-1.5">
-            <span>Hospital Executive Intelligence</span>
+            <span>Executive Intelligence</span>
             <span>/</span>
             <span className="text-slate-800 font-semibold">Macro Overview</span>
           </div>
@@ -54,57 +63,50 @@ export default function OverviewPage() {
           </p>
         </div>
 
-        {/* Period Selector */}
-        <div className="flex items-center gap-2 bg-white border border-slate-200 px-3.5 py-2 rounded-lg text-xs self-start md:self-auto shadow-sm">
-          <Calendar className="w-4 h-4 text-slate-500 shrink-0" />
-          <span className="text-slate-600 font-medium whitespace-nowrap">Audit Period:</span>
-          <select
-            value={selectedPeriodKey}
-            onChange={(e) => setSelectedPeriodKey(e.target.value)}
-            className="bg-slate-50 text-emerald-800 font-mono font-bold px-2.5 py-1 rounded border border-slate-200 focus:outline-none cursor-pointer text-xs"
-          >
-            {Object.keys(PERIOD_DATA_MAP).map((period) => (
-              <option key={period} value={period}>
-                {period}
-              </option>
-            ))}
-          </select>
+        {/* Active Reporting Scope Pill */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-xs text-slate-700 font-medium self-start md:self-auto">
+          <span className="text-slate-400 font-normal">Active Scope:</span>
+          <span className="font-bold text-slate-900 font-mono">{currentStats.reportingPeriod}</span>
         </div>
       </div>
 
-      {/* 2. Top-Tier KPI Cards (5-Second Rule: 4 High-Impact Numbers) */}
+      {/* 2. Top-Tier KPI Cards (Precision Alignment & No Text Collisions) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Card 1: Total Waste Weight */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden flex flex-col justify-between">
+        {/* Card 1: Total Waste */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[145px]">
           <div>
-            <div className="flex items-center justify-between text-slate-500 text-xs mb-3">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">Total Waste Generated</span>
-              <span className="flex items-center text-emerald-700 text-xs font-mono font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 whitespace-nowrap">
-                <ArrowDownRight className="w-3.5 h-3.5 mr-0.5 shrink-0" /> {currentStats.weightChangePercent}% YoY
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
+                Total Waste Generated
+              </span>
+              <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <ArrowDownRight className="w-3.5 h-3.5" /> -8.4% YoY
               </span>
             </div>
             <div className="text-3xl font-bold text-slate-900 tracking-tight font-mono">
-              {formatNumber(currentStats.totalWasteWeightKg)} <span className="text-base font-medium text-slate-500">kg</span>
+              {formatNumber(currentStats.totalWasteWeightKg)} <span className="text-base font-normal text-slate-500">kg</span>
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Period: {currentStats.reportingPeriod}</span>
-            <span className="font-semibold text-slate-700">12 OTs Audited</span>
+            <span className="truncate">Period: {currentStats.reportingPeriod}</span>
+            <span className="font-semibold text-slate-700 shrink-0 ml-1">12 OTs Audited</span>
           </div>
         </div>
 
         {/* Card 2: Biohazard Ratio */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden flex flex-col justify-between">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[145px]">
           <div>
-            <div className="flex items-center justify-between text-slate-500 text-xs mb-3">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">Biohazard Ratio</span>
-              <span className="text-amber-800 font-mono text-xs font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 whitespace-nowrap">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
+                Biohazard Ratio
+              </span>
+              <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
                 +{(currentStats.yellowBiohazardRatioPercent - currentStats.yellowTargetRatioPercent).toFixed(1)}% vs Cap
               </span>
             </div>
             <div className="text-3xl font-bold text-amber-700 tracking-tight font-mono flex items-baseline gap-2">
               {currentStats.yellowBiohazardRatioPercent}%
-              <span className="text-xs font-normal text-slate-500">Target: {currentStats.yellowTargetRatioPercent}%</span>
+              <span className="text-xs font-normal text-slate-500 font-sans">Target: 25.0%</span>
             </div>
             <div className="mt-3 w-full bg-slate-100 rounded-full h-2 overflow-hidden">
               <div className="bg-amber-500 h-full rounded-full" style={{ width: `${currentStats.yellowBiohazardRatioPercent}%` }} />
@@ -115,13 +117,15 @@ export default function OverviewPage() {
           </div>
         </div>
 
-        {/* Card 3: Cost Leakage */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden flex flex-col justify-between">
+        {/* Card 3: Cost Loss */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[145px]">
           <div>
-            <div className="flex items-center justify-between text-slate-500 text-xs mb-3">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">Misclassification Cost Loss</span>
-              <span className="flex items-center text-red-700 text-xs font-mono font-bold bg-red-50 px-2 py-0.5 rounded border border-red-200 whitespace-nowrap">
-                <ArrowUpRight className="w-3.5 h-3.5 mr-0.5 shrink-0" /> Budget Leak
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
+                Misclassification Cost Loss
+              </span>
+              <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-red-50 text-red-800 border border-red-200">
+                <ArrowUpRight className="w-3.5 h-3.5" /> Budget Leak
               </span>
             </div>
             <div className="text-3xl font-bold text-red-700 tracking-tight font-mono">
@@ -134,17 +138,19 @@ export default function OverviewPage() {
           </div>
         </div>
 
-        {/* Card 4: Scope 3 Carbon Saved */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden flex flex-col justify-between">
+        {/* Card 4: Scope 3 Carbon */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[145px]">
           <div>
-            <div className="flex items-center justify-between text-slate-500 text-xs mb-3">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">Scope 3 Carbon Abated</span>
-              <span className="flex items-center text-emerald-700 text-xs font-mono font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 whitespace-nowrap">
-                <Leaf className="w-3.5 h-3.5 mr-0.5 shrink-0" /> ESG Metric
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
+                Scope 3 Carbon Abated
+              </span>
+              <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <Leaf className="w-3.5 h-3.5 mr-0.5" /> ESG Metric
               </span>
             </div>
             <div className="text-3xl font-bold text-emerald-700 tracking-tight font-mono">
-              {currentStats.scope3CarbonSavedTonnes} <span className="text-base font-medium text-slate-500">tCO₂-e</span>
+              {currentStats.scope3CarbonSavedTonnes} <span className="text-base font-normal text-slate-500">tCO₂-e</span>
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
@@ -154,9 +160,9 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {/* 3. Analytics Section (Monthly Trend + Progressive Disclosure Top 3 Depts) */}
+      {/* 3. Dynamic Sliced Time-Series Chart + Progressive Disclosure */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Monthly Trend Composed Chart */}
+        {/* Left 2 Cols: Monthly Trend Sliced Chart */}
         <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
             <div>
@@ -164,7 +170,7 @@ export default function OverviewPage() {
                 Monthly Waste Generation & Incineration Cost Trend
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Monthly volume breakdown (kg, left axis) vs Monthly Total Disposal Invoices ($AUD, right axis)
+                Dynamic time-series timeline ({currentStats.monthlyTrend[0]?.month} - {currentStats.monthlyTrend[currentStats.monthlyTrend.length - 1]?.month} 2026)
               </p>
             </div>
             <div className="flex items-center gap-4 text-xs shrink-0">
@@ -191,15 +197,15 @@ export default function OverviewPage() {
                 <YAxis yAxisId="left" stroke="#64748B" fontSize={11} tickLine={false} tickFormatter={(v) => `${v / 1000}t`} />
                 <YAxis yAxisId="right" orientation="right" stroke="#059669" fontSize={11} tickLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
                 <Tooltip />
-                <Bar yAxisId="left" dataKey="biohazardKg" name="Biohazard (kg)" fill="#F59E0B" radius={[4, 4, 0, 0]} barSize={20} />
-                <Bar yAxisId="left" dataKey="generalKg" name="General (kg)" fill="#0284C7" radius={[4, 4, 0, 0]} barSize={20} />
-                <Line yAxisId="right" type="monotone" dataKey="totalCostAUD" name="Total Cost ($AUD)" stroke="#059669" strokeWidth={2.5} dot={{ r: 3.5, fill: "#059669" }} />
+                <Bar yAxisId="left" dataKey="biohazardKg" name="Biohazard (kg)" fill="#F59E0B" radius={[4, 4, 0, 0]} barSize={22} />
+                <Bar yAxisId="left" dataKey="generalKg" name="General (kg)" fill="#0284C7" radius={[4, 4, 0, 0]} barSize={22} />
+                <Line yAxisId="right" type="monotone" dataKey="totalCostAUD" name="Total Cost ($AUD)" stroke="#059669" strokeWidth={2.5} dot={{ r: 4, fill: "#059669" }} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Right 1 Col: Top 3 Department Focus with Progressive Disclosure Modal */}
+        {/* Right 1 Col: Top 3 Department Focus */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -239,7 +245,7 @@ export default function OverviewPage() {
               ))}
             </div>
 
-            {/* Progressive Disclosure Trigger Button */}
+            {/* Progressive Disclosure Button */}
             <button
               onClick={() => setShowAllDeptsModal(true)}
               className="mt-4 w-full py-2.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors flex items-center justify-center gap-1.5"
@@ -259,7 +265,7 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {/* 4. Full Department Breakdown Modal (Progressive Disclosure) */}
+      {/* 4. Full Department Breakdown Modal */}
       {showAllDeptsModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white border border-slate-200 rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-5">
