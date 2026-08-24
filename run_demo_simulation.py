@@ -4,6 +4,7 @@ import os
 import random
 import time
 from pathlib import Path
+from typing import Tuple
 import cv2
 import numpy as np
 
@@ -38,45 +39,36 @@ SAMPLE_MAPPING = {
 }
 
 
-def load_diverse_demo_samples(num_per_cat=5):
-    # Check bundled demo samples first
+def load_diverse_demo_samples():
+    """Load all available high-quality demo samples from assets/demo_samples."""
     bundled_samples_dir = BASE_DIR / "assets" / "demo_samples"
     if bundled_samples_dir.exists() and any(bundled_samples_dir.iterdir()):
         samples = []
-        for cat_dir in bundled_samples_dir.iterdir():
+        for cat_dir in sorted(bundled_samples_dir.iterdir()):
             if cat_dir.is_dir():
                 cat_name = cat_dir.name
                 imgs = list(cat_dir.glob("*.jpg")) + list(cat_dir.glob("*.png")) + list(cat_dir.glob("*.jpeg"))
                 for img in imgs:
                     samples.append((cat_name, cat_name, img))
         if samples:
-            random.shuffle(samples)
             return samples
 
     # Fallback to data/photos
     photos_dir = BASE_DIR / "data" / "photos"
     samples = []
-
     for cat, subfolders in SAMPLE_MAPPING.items():
-        cat_samples = []
         for folder in subfolders:
             folder_p = photos_dir / folder
             if folder_p.exists():
                 imgs = list(folder_p.glob("*.jpg")) + list(folder_p.glob("*.png")) + list(folder_p.glob("*.jpeg"))
                 if imgs:
-                    cat_samples.append((cat, folder, random.choice(imgs)))
-
-        if len(cat_samples) > num_per_cat:
-            cat_samples = random.sample(cat_samples, num_per_cat)
-
-        samples.extend(cat_samples)
-
-    random.shuffle(samples)
+                    for img in imgs[:5]:
+                        samples.append((cat, folder, img))
     return samples
 
 
-def create_chute_canvas_with_image(img_path: Path) -> np.ndarray:
-    canvas = np.full((FRAME_HEIGHT, FRAME_WIDTH, 3), 45, dtype=np.uint8)
+def create_chute_canvas_with_image(img_path: Path) -> Tuple[np.ndarray, Tuple[int, int, int, int]]:
+    canvas = np.full((FRAME_HEIGHT, FRAME_WIDTH, 3), 40, dtype=np.uint8)
 
     rx1, ry1, rx2, ry2 = ROI_COORDS
     rw = rx2 - rx1
@@ -84,10 +76,10 @@ def create_chute_canvas_with_image(img_path: Path) -> np.ndarray:
 
     img = cv2.imread(str(img_path))
     if img is None:
-        return canvas
+        return canvas, (rx1 + 20, ry1 + 20, rx2 - 20, ry2 - 20)
 
     ih, iw = img.shape[:2]
-    scale = min((rw - 30) / iw, (rh - 30) / rh)
+    scale = min((rw - 60) / iw, (rh - 60) / rh)
     nw, nh = int(iw * scale), int(ih * scale)
     resized = cv2.resize(img, (nw, nh), interpolation=cv2.INTER_AREA)
 
@@ -95,7 +87,8 @@ def create_chute_canvas_with_image(img_path: Path) -> np.ndarray:
     cy = ry1 + (rh - nh) // 2
 
     canvas[cy:cy + nh, cx:cx + nw] = resized
-    return canvas
+    bbox = (cx, cy, cx + nw, cy + nh)
+    return canvas, bbox
 
 
 def main():
@@ -112,9 +105,9 @@ def main():
     print("    [Q] or [ESC]   : Exit Demo")
     print("=" * 70 + "\n")
 
-    samples = load_diverse_demo_samples(num_per_cat=5)
+    samples = load_diverse_demo_samples()
     if not samples:
-        print("[Error] No sample images found in data/photos")
+        print("[Error] No sample images found in assets/demo_samples or data/photos")
         return
 
     detector = WasteDetector()
@@ -127,10 +120,10 @@ def main():
 
     while True:
         cat_gt, folder_name, img_path = samples[current_idx]
-        frame = create_chute_canvas_with_image(img_path)
+        frame, item_bbox = create_chute_canvas_with_image(img_path)
 
-        # Detect
-        inference = detector.detect_in_roi(frame, ROI_COORDS)
+        # Detect with precise item_bbox placement
+        inference = detector.detect_in_roi(frame, ROI_COORDS, explicit_bbox=item_bbox)
 
         # Render HUD
         vis = visualizer.draw_hud(

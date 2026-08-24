@@ -16,7 +16,8 @@ import {
   Layers,
   Trash2,
   Boxes,
-  Stethoscope
+  Stethoscope,
+  AlertCircle
 } from "lucide-react";
 import { 
   ResponsiveContainer, 
@@ -50,7 +51,7 @@ export default function TheatresPage() {
   const [activeTab, setActiveTab] = useState<"MATRIX" | "DETAIL">("MATRIX");
   const [selectedSpecialty, setSelectedSpecialty] = useState("ALL");
   const [selectedTheatre, setSelectedTheatre] = useState("OT_03");
-  const [selectedBinStreamMode, setSelectedBinStreamMode] = useState<"ALL" | "YELLOW" | "CLEAR" | "WHITE">("ALL");
+  const [selectedBinStreamMode, setSelectedBinStreamMode] = useState<"ALL" | "YELLOW" | "WHITE" | "CLEAR">("ALL");
 
   const activeProfile = getTheatreProfile(selectedTheatre);
 
@@ -116,7 +117,7 @@ export default function TheatresPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* TAB 1: ALL THEATRES MATRIX (with Rich Segmented Specialty Cards) */}
+      {/* TAB 1: ALL THEATRES MATRIX */}
       {/* ========================================================================= */}
       {activeTab === "MATRIX" && (
         <div className="space-y-6 animate-fadeIn">
@@ -326,32 +327,63 @@ export default function TheatresPage() {
             </div>
           </div>
 
-          {/* EMR Surgical Count & PSSA Transport Governance Card */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
-                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+          {/* 3-Bin Real-Time Problem Diagnostic Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Bin 1: Yellow Bin */}
+            <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 shadow-sm space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-amber-500 inline-block shrink-0" />
+                  Yellow Bin (Clinical Biohazard)
+                </span>
+                <span className="text-[10px] font-mono font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded border border-red-200">
+                  Critical Leak Peak
+                </span>
               </div>
-              <div>
-                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  AS/NZS 3816 & Surgical Count Governance Protocol
-                </h4>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  All clinical waste remains inside the theatre until final instrument/swab count is officially signed off.
-                </p>
+              <div className="text-2xl font-bold text-slate-900 font-mono">
+                382 <span className="text-xs font-normal text-slate-500">total drops</span>
               </div>
+              <p className="text-[11px] text-red-800 font-medium leading-relaxed">
+                🔴 <strong>224 clean plastics misclassified (58.6%)</strong> during 07:30~08:30 setup. Incineration loss: <strong>$7,690 AUD</strong>.
+              </p>
             </div>
 
-            <div className="flex items-center gap-4 text-xs font-mono shrink-0 bg-slate-50 px-3.5 py-2 rounded-lg border border-slate-200">
-              <div>
-                <span className="text-slate-400 block text-[10px]">Surgical Count Verified:</span>
-                <strong className="text-emerald-800">{activeProfile.emrTimeline.countSignedOffTime}</strong>
+            {/* Bin 2: White Bin */}
+            <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 shadow-sm space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block shrink-0" />
+                  White Bin (Clean Recyclables)
+                </span>
+                <span className="text-[10px] font-mono font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
+                  Low Utilization
+                </span>
               </div>
-              <span className="text-slate-300">→</span>
-              <div>
-                <span className="text-slate-400 block text-[10px]">PSSA Smart Cart Scan:</span>
-                <strong className="text-slate-900">{activeProfile.emrTimeline.pssaCollectionTime}</strong>
+              <div className="text-2xl font-bold text-emerald-800 font-mono">
+                39 <span className="text-xs font-normal text-slate-500">diverted drops</span>
               </div>
+              <p className="text-[11px] text-emerald-900 font-medium leading-relaxed">
+                🟡 Only 10.2% of clean packaging utilized this bin. Move bin directly beside sterile table.
+              </p>
+            </div>
+
+            {/* Bin 3: Clear Bin */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 shadow-sm space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-slate-400 inline-block shrink-0" />
+                  Clear / Black Bin (General Dry)
+                </span>
+                <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
+                  Normal Stable
+                </span>
+              </div>
+              <div className="text-2xl font-bold text-slate-800 font-mono">
+                54 <span className="text-xs font-normal text-slate-500">dry drops</span>
+              </div>
+              <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
+                🟢 Office & dry lunch waste properly segregated. No infectious contamination detected.
+              </p>
             </div>
           </div>
 
@@ -413,10 +445,10 @@ export default function TheatresPage() {
                   <div>
                     <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                       <Activity className="w-4 h-4 text-emerald-600" />
-                      Hourly Waste Influx & Bin Stream Composition ({activeProfile.theatreId})
+                      Hourly Waste Influx & Yellow Bin Misclassification Peak ({activeProfile.theatreId})
                     </h4>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Units: <strong>Events / Hour (투기 횟수)</strong>. Monitor stream-specific flow and yellow bin misclassification spikes.
+                      Units: <strong>Events / Hour (투기 횟수)</strong>. Red shaded area highlights clean packaging wrongly thrown into Yellow bin during 07:30 pre-op setup.
                     </p>
                   </div>
 
@@ -424,7 +456,7 @@ export default function TheatresPage() {
                   <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs self-start shrink-0">
                     {[
                       { id: "ALL", label: "All Streams" },
-                      { id: "YELLOW", label: "Yellow Bin (Clinical)" },
+                      { id: "YELLOW", label: "Yellow Bin (Critical)" },
                       { id: "WHITE", label: "White Bin (Recycle)" }
                     ].map((b) => (
                       <button
@@ -451,20 +483,19 @@ export default function TheatresPage() {
                       <Tooltip />
                       {selectedBinStreamMode === "ALL" && (
                         <>
-                          <Area type="monotone" dataKey="whiteBinDrops" stackId="1" stroke="#059669" fill="#10B981" fillOpacity={0.5} name="White Bin (Clean Recyclables)" />
-                          <Area type="monotone" dataKey="clearBinDrops" stackId="1" stroke="#64748B" fill="#94A3B8" fillOpacity={0.4} name="Clear Bin (General Dry Waste)" />
-                          <Area type="monotone" dataKey="yellowBinDrops" stackId="1" stroke="#D97706" fill="#F59E0B" fillOpacity={0.5} name="Yellow Bin (Total Influx)" />
-                          <Area type="monotone" dataKey="yellowMisclassDrops" stroke="#DC2626" fill="#EF4444" fillOpacity={0.7} name="Yellow Bin MISCLASSIFICATION (Clean Plastic in Yellow!)" />
+                          <Area type="monotone" dataKey="yellowBinDrops" stroke="#D97706" fill="#F59E0B" fillOpacity={0.4} name="Yellow Bin (Total Influx)" />
+                          <Area type="monotone" dataKey="yellowMisclassDrops" stroke="#DC2626" fill="#EF4444" fillOpacity={0.8} name="Clean Plastic Misclassified in Yellow Bin (Budget Leak!)" />
+                          <Area type="monotone" dataKey="whiteBinDrops" stroke="#059669" fill="#10B981" fillOpacity={0.5} name="White Bin (Clean Recyclables)" />
                         </>
                       )}
                       {selectedBinStreamMode === "YELLOW" && (
                         <>
-                          <Area type="monotone" dataKey="yellowBinDrops" stroke="#D97706" fill="#F59E0B" fillOpacity={0.5} name="Yellow Bin (Total Influx)" />
-                          <Area type="monotone" dataKey="yellowMisclassDrops" stroke="#DC2626" fill="#EF4444" fillOpacity={0.8} name="Clean Plastic Misclassified in Yellow Bin (Budget Leak!)" />
+                          <Area type="monotone" dataKey="yellowBinDrops" stroke="#D97706" fill="#F59E0B" fillOpacity={0.3} name="Yellow Bin Total Influx" />
+                          <Area type="monotone" dataKey="yellowMisclassDrops" stroke="#DC2626" fill="#EF4444" fillOpacity={0.85} name="Misclassified Clean Packaging in Yellow Bin (Action Target)" />
                         </>
                       )}
                       {selectedBinStreamMode === "WHITE" && (
-                        <Area type="monotone" dataKey="whiteBinDrops" stroke="#059669" fill="#10B981" fillOpacity={0.6} name="White Bin (Clean Recyclables Diverted)" />
+                        <Area type="monotone" dataKey="whiteBinDrops" stroke="#059669" fill="#10B981" fillOpacity={0.7} name="White Bin (Clean Recyclables Diverted)" />
                       )}
                     </AreaChart>
                   </ResponsiveContainer>

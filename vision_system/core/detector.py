@@ -57,6 +57,7 @@ class WasteDetector:
         self,
         frame: np.ndarray,
         roi_coords: Tuple[int, int, int, int],
+        explicit_bbox: Optional[Tuple[int, int, int, int]] = None,
     ) -> Optional[InferenceResult]:
         """Performs classification and contamination analysis on the ROI region."""
         x1, y1, x2, y2 = roi_coords
@@ -78,19 +79,34 @@ class WasteDetector:
             top1_conf = float(results[0].probs.top1conf.cpu().numpy())
             class_name = results[0].names[top1_idx]
 
-            # Bounding Box Estimation via Contour/Saliency
-            gray = cv2.cvtColor(roi_crop, cv2.COLOR_BGR2GRAY)
-            blurred = cv2.GaussianBlur(gray, (7, 7), 0)
-            _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-            contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            # Bounding Box: If explicit_bbox provided (e.g. from simulator), use it.
+            # Otherwise, use balanced saliency bounding.
+            if explicit_bbox is not None:
+                bbox = list(explicit_bbox)
+            else:
+                # Find foreground object contour inside ROI
+                gray = cv2.cvtColor(roi_crop, cv2.COLOR_BGR2GRAY)
+                # Compute difference from background
+                bg_val = np.median(gray)
+                diff = cv2.absdiff(gray, int(bg_val))
+                _, thresh = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
+                contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-            bbox = [x1 + 10, y1 + 10, x2 - 10, y2 - 10]
-            if contours:
-                valid_contours = [c for c in contours if cv2.contourArea(c) > MIN_CONTOUR_AREA]
-                if valid_contours:
-                    largest = max(valid_contours, key=cv2.contourArea)
-                    bx, by, bw, bh = cv2.boundingRect(largest)
-                    bbox = [x1 + bx, y1 + by, x1 + bx + bw, y1 + by + bh]
+                if contours:
+                    valid_c = [c for c in contours if cv2.contourArea(c) > 400]
+                    if valid_c:
+                        largest = max(valid_c, key=cv2.contourArea)
+                        bx, by, bw, bh = cv2.boundingRect(largest)
+                        pad = 6
+                        bx1 = max(x1, x1 + bx - pad)
+                        by1 = max(y1, y1 + by - pad)
+                        bx2 = min(x2, x1 + bx + bw + pad)
+                        by2 = min(y2, y1 + by + bh + pad)
+                        bbox = [bx1, by1, bx2, by2]
+                    else:
+                        bbox = [x1 + 15, y1 + 15, x2 - 15, y2 - 15]
+                else:
+                    bbox = [x1 + 15, y1 + 15, x2 - 15, y2 - 15]
 
             # Map to MaterialCategory enum
             category_mapping = {
