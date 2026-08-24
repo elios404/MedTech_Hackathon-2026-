@@ -448,7 +448,7 @@ export default function TheatresPage() {
                       Hourly Waste Influx & Yellow Bin Misclassification Peak ({activeProfile.theatreId})
                     </h4>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Units: <strong>Events / Hour (투기 횟수)</strong>. Red shaded area highlights clean packaging wrongly thrown into Yellow bin during 07:30 pre-op setup.
+                      Units: <strong>Events / Hour (Drop Count)</strong>. Red shaded area highlights clean packaging wrongly thrown into Yellow bin during 07:30 pre-op setup.
                     </p>
                   </div>
 
