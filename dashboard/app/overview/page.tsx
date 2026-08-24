@@ -2,15 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { 
-  DollarSign, 
-  TrendingDown, 
   Leaf, 
-  AlertTriangle, 
   ArrowDownRight, 
-  ArrowUpRight,
-  Sparkles,
-  ArrowRight,
-  X
+  ArrowUpRight, 
+  Sparkles, 
+  ArrowRight, 
+  X 
 } from "lucide-react";
 import { 
   ResponsiveContainer, 
@@ -47,7 +44,7 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-8">
-      {/* 1. Clean Page Title (Redundant Period Selector Removed) */}
+      {/* 1. Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
         <div>
           <div className="text-xs text-slate-500 font-mono flex items-center gap-1.5 mb-1.5">
@@ -63,20 +60,20 @@ export default function OverviewPage() {
           </p>
         </div>
 
-        {/* Active Reporting Scope Pill */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-xs text-slate-700 font-medium self-start md:self-auto">
-          <span className="text-slate-400 font-normal">Active Scope:</span>
+        {/* Active Scope Badge */}
+        <div className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-100 border border-slate-200 text-xs text-slate-700 font-medium self-start md:self-auto">
+          <span className="text-slate-500 font-normal">Active Scope:</span>
           <span className="font-bold text-slate-900 font-mono">{currentStats.reportingPeriod}</span>
         </div>
       </div>
 
-      {/* 2. Top-Tier KPI Cards (Precision Alignment & No Text Collisions) */}
+      {/* 2. Top-Tier KPI Cards (No Ellipsis Truncation & Pristine 2-Line Meta Layout) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Card 1: Total Waste */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[145px]">
+        {/* Card 1: Total Waste Generated */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[160px]">
           <div>
             <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 Total Waste Generated
               </span>
               <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
@@ -87,17 +84,17 @@ export default function OverviewPage() {
               {formatNumber(currentStats.totalWasteWeightKg)} <span className="text-base font-normal text-slate-500">kg</span>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span className="truncate">Period: {currentStats.reportingPeriod}</span>
-            <span className="font-semibold text-slate-700 shrink-0 ml-1">12 OTs Audited</span>
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 leading-normal">
+            <span>Period: {currentStats.reportingPeriod}</span>
+            <span className="font-semibold text-slate-700">12 OTs Audited</span>
           </div>
         </div>
 
         {/* Card 2: Biohazard Ratio */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[145px]">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[160px]">
           <div>
             <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 Biohazard Ratio
               </span>
               <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
@@ -112,16 +109,16 @@ export default function OverviewPage() {
               <div className="bg-amber-500 h-full rounded-full" style={{ width: `${currentStats.yellowBiohazardRatioPercent}%` }} />
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500">
+          <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 leading-normal">
             <span>Clinical Target: &lt; 25.0% yellow bin ratio</span>
           </div>
         </div>
 
-        {/* Card 3: Cost Loss */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[145px]">
+        {/* Card 3: Misclassification Cost Loss */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[160px]">
           <div>
             <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 Misclassification Cost Loss
               </span>
               <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-red-50 text-red-800 border border-red-200">
@@ -132,17 +129,17 @@ export default function OverviewPage() {
               {formatCurrencyAUD(currentStats.misclassificationCostLossAUD)}
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 leading-normal">
             <span>Incineration Diff:</span>
             <span className="font-mono font-bold text-slate-800">$3.50 vs $0.35/kg</span>
           </div>
         </div>
 
-        {/* Card 4: Scope 3 Carbon */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[145px]">
+        {/* Card 4: Scope 3 Carbon Abated */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[160px]">
           <div>
             <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 Scope 3 Carbon Abated
               </span>
               <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
@@ -153,14 +150,14 @@ export default function OverviewPage() {
               {currentStats.scope3CarbonSavedTonnes} <span className="text-base font-normal text-slate-500">tCO₂-e</span>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 leading-normal">
             <span>Protocol:</span>
             <span className="font-semibold text-slate-800">Clean Packaging Diversion</span>
           </div>
         </div>
       </div>
 
-      {/* 3. Dynamic Sliced Time-Series Chart + Progressive Disclosure */}
+      {/* 3. Dynamic Sliced Time-Series Chart + Top 3 Department Focus */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: Monthly Trend Sliced Chart */}
         <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">

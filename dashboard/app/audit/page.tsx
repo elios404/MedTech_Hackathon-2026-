@@ -6,7 +6,9 @@ import {
   AlertOctagon, 
   ShieldAlert, 
   X, 
-  FileText 
+  FileText, 
+  Layers,
+  Sparkles
 } from "lucide-react";
 import { 
   ResponsiveContainer, 
@@ -17,18 +19,34 @@ import {
   ZAxis, 
   Tooltip, 
   CartesianGrid, 
-  ReferenceLine 
+  ReferenceLine,
+  ReferenceArea
 } from "recharts";
 import { 
   SMART_CART_AUDIT_LOGS, 
-  BULK_DENSITY_SCATTER_DATA 
+  BULK_DENSITY_SCATTER_DATA,
+  SPECIALTY_DENSITY_RULES
 } from "@/lib/mock-data";
 import { Tier2BagAudit } from "@/types/waste";
 import { formatCurrencyAUD, formatDensity, formatWeightKg, formatVolumeL } from "@/lib/utils";
 
+const SPECIALTIES = [
+  "All Specialties",
+  "Orthopaedics",
+  "Neurosurgery",
+  "General Surgery",
+  "Emergency Trauma",
+  "Ophthalmology & ENT"
+];
+
 export default function AuditPage() {
   const [selectedBag, setSelectedBag] = useState<Tier2BagAudit | null>(null);
+  const [selectedSpecialty, setSelectedSpecialty] = useState<string>("All Specialties");
   const [filterType, setFilterType] = useState<string>("ALL");
+
+  const activeRule = selectedSpecialty !== "All Specialties" && SPECIALTY_DENSITY_RULES[selectedSpecialty]
+    ? SPECIALTY_DENSITY_RULES[selectedSpecialty]
+    : SPECIALTY_DENSITY_RULES["Orthopaedics"];
 
   const filteredLogs = SMART_CART_AUDIT_LOGS.filter((b) => {
     if (filterType === "ALL") return true;
@@ -36,6 +54,11 @@ export default function AuditPage() {
     if (filterType === "LOW_DENSITY") return b.anomalyType === "LOW_DENSITY_MISCLASS";
     if (filterType === "HIGH_DENSITY") return b.anomalyType === "HIGH_DENSITY_FLUID_RISK";
     return true;
+  });
+
+  const scatterData = BULK_DENSITY_SCATTER_DATA.filter((p) => {
+    if (selectedSpecialty === "All Specialties") return true;
+    return p.specialty === selectedSpecialty;
   });
 
   return (
@@ -49,21 +72,21 @@ export default function AuditPage() {
             <span className="text-slate-800 font-semibold">Tier 2 Smart Cart</span>
           </div>
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Non-Destructive Bulk Density Audit & Physical Anomaly Detection
+            Non-Destructive Bulk Density Audit & Physics-Grounded Anomaly Detection
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Physical load-cell & volume audit enforcing AS/NZS 3816 standards without unsealing biohazard bags.
+            Specialty-dynamic weight vs 3D volume audit enforcing AS/NZS 3816 standards without unsealing biohazard bags.
           </p>
         </div>
 
-        {/* Status Callout */}
+        {/* Quarantined Indicator */}
         <div className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-800 self-start md:self-auto shadow-sm">
           <AlertOctagon className="w-4 h-4 text-red-600 shrink-0" />
-          <span className="whitespace-nowrap font-semibold">Active Quarantined Bags: <strong>4 Bags Isolated</strong></span>
+          <span className="whitespace-nowrap font-semibold">Active Quarantined Bags: <strong>3 Bags Isolated</strong></span>
         </div>
       </div>
 
-      {/* 2. Bulk Density Scatter Plot & Clinical Rule Engine */}
+      {/* 2. Specialty Selector & Dynamic Bulk Density Scatter Plot */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: Scatter Plot */}
         <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
@@ -74,16 +97,22 @@ export default function AuditPage() {
                 Physical Bulk Density Distribution (&rho; = kg/L)
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Weight vs Volume scatter plot with strict regulatory boundary reference lines.
+                Dynamic normal density band adapting to surgical specialty physics.
               </p>
             </div>
-            <div className="flex items-center gap-3 text-xs font-mono text-[11px] shrink-0">
-              <span className="flex items-center gap-1.5 text-amber-800 bg-amber-50 px-2.5 py-1 rounded border border-amber-200 font-bold">
-                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" /> Low (&lt;0.08 kg/L)
-              </span>
-              <span className="flex items-center gap-1.5 text-red-800 bg-red-50 px-2.5 py-1 rounded border border-red-200 font-bold">
-                <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" /> Fluid (&gt;0.70 kg/L)
-              </span>
+
+            {/* Specialty Switcher */}
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-xs self-start">
+              <span className="text-slate-500 font-medium">Specialty Focus:</span>
+              <select
+                value={selectedSpecialty}
+                onChange={(e) => setSelectedSpecialty(e.target.value)}
+                className="bg-transparent font-bold text-slate-900 focus:outline-none cursor-pointer text-xs"
+              >
+                {SPECIALTIES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -102,6 +131,7 @@ export default function AuditPage() {
                       return (
                         <div className="bg-white p-3 rounded-lg border border-slate-200 text-xs shadow-lg space-y-1">
                           <p className="font-bold text-slate-900">{data.label}</p>
+                          <p className="text-slate-600">Specialty: <strong>{data.specialty}</strong></p>
                           <p className="text-slate-600">Weight: <strong className="text-slate-900">{data.weight} kg</strong></p>
                           <p className="text-slate-600">Volume: <strong className="text-slate-900">{data.volume} L</strong></p>
                           <p className="text-slate-600">Density: <strong className="text-emerald-700">{data.density.toFixed(3)} kg/L</strong></p>
@@ -112,44 +142,41 @@ export default function AuditPage() {
                     return null;
                   }}
                 />
-                <ReferenceLine y={2.4} stroke="#D97706" strokeDasharray="4 4" label={{ value: "Low Density Anomaly (0.08 kg/L)", fill: "#D97706", fontSize: 10 }} />
-                <ReferenceLine y={14.0} stroke="#DC2626" strokeDasharray="4 4" label={{ value: "Fluid Leak Danger (0.70 kg/L)", fill: "#DC2626", fontSize: 10 }} />
-                <Scatter name="Waste Bags" data={BULK_DENSITY_SCATTER_DATA} fill="#059669" />
+                {/* Dynamic Boundary Line */}
+                <ReferenceLine y={4.0} stroke="#D97706" strokeDasharray="4 4" label={{ value: `Packaging Misclassification Threshold (< ${activeRule.lowDensityThreshold} kg/L)`, fill: "#D97706", fontSize: 10 }} />
+                <Scatter name="Waste Bags" data={scatterData} fill="#059669" />
               </ScatterChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Right 1 Col: Physics & AS/NZS 3816 Rules */}
+        {/* Right 1 Col: Specialty Physics & Clinical Logic */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
           <div className="space-y-4">
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
-              AS/NZS 3816 Protocol Rules
+              {activeRule.specialty} Physical Baseline
             </h3>
             
-            <div className="p-3.5 rounded-lg bg-amber-50 border border-amber-200 text-xs space-y-1.5">
-              <div className="flex items-center gap-1.5 text-amber-800 font-bold">
-                <span>Low Density Anomaly (&lt; 0.08 kg/L)</span>
-              </div>
-              <p className="text-slate-700 text-[11px] leading-relaxed">
-                Indicates yellow biohazard bag filled with lightweight sterile plastic packaging and trapped air. Direct contributor to hospital budget leakage.
+            <div className="p-3.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs space-y-1.5">
+              <span className="font-bold text-emerald-900">Normal Expected Range:</span>
+              <p className="font-mono font-bold text-slate-900 text-sm">
+                {activeRule.expectedMinDensity} ~ {activeRule.expectedMaxDensity} kg/L
+              </p>
+              <p className="text-slate-700 text-[11px] leading-relaxed pt-1">
+                {activeRule.clinicalExplanation}
               </p>
             </div>
 
-            <div className="p-3.5 rounded-lg bg-red-50 border border-red-200 text-xs space-y-1.5">
-              <div className="flex items-center gap-1.5 text-red-800 font-bold">
-                <span>High Density Fluid Leak (&gt; 0.70 kg/L)</span>
-              </div>
-              <p className="text-slate-700 text-[11px] leading-relaxed">
-                Critical infection control violation. Heavy blood/suction canisters misplaced into black general waste bag. Triggers immediate isolation.
-              </p>
+            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-900 leading-relaxed">
+              <strong className="block mb-0.5">3D LiDAR Volume Measurement:</strong>
+              Smart Cart calculates actual displacement volume, avoiding false positives caused by partially filled (50% fill rate) bags.
             </div>
           </div>
 
           <div className="pt-4 border-t border-slate-100 text-xs text-slate-500">
             <p className="text-[11px]">
-              * Smart Cart RFID scanner links physical measurements to Theatre ID instantly upon cart weigh-in.
+              * RFID reader automatically pairs Specialty ID upon PSSA cart weigh-in.
             </p>
           </div>
         </div>
@@ -190,7 +217,7 @@ export default function AuditPage() {
             <thead>
               <tr className="border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px] bg-slate-50">
                 <th className="py-3.5 px-4">Bag ID / RFID</th>
-                <th className="py-3.5 px-4">Origin Theatre</th>
+                <th className="py-3.5 px-4">Origin Suite</th>
                 <th className="py-3.5 px-4">Bin Stream</th>
                 <th className="py-3.5 px-4">Gross Weight</th>
                 <th className="py-3.5 px-4">Volume</th>
@@ -219,23 +246,23 @@ export default function AuditPage() {
                   <td className="py-3.5 px-4 font-mono whitespace-nowrap">{formatWeightKg(bag.grossWeightKg)}</td>
                   <td className="py-3.5 px-4 font-mono whitespace-nowrap">{formatVolumeL(bag.measuredVolumeL)}</td>
                   <td className="py-3.5 px-4 font-mono font-bold whitespace-nowrap">
-                    <span className={bag.bulkDensityKgL < 0.08 ? "text-amber-700" : bag.bulkDensityKgL > 0.70 ? "text-red-700" : "text-emerald-700"}>
+                    <span className={bag.anomalyType === "LOW_DENSITY_MISCLASS" ? "text-amber-700" : bag.anomalyType === "HIGH_DENSITY_FLUID_RISK" ? "text-red-700" : "text-emerald-700"}>
                       {formatDensity(bag.bulkDensityKgL)}
                     </span>
                   </td>
                   <td className="py-3.5 px-4 whitespace-nowrap">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                    <span className={`px-2.5 py-0.5 rounded text-[10px] font-mono font-bold border ${
                       bag.anomalyType === "LOW_DENSITY_MISCLASS"
                         ? "bg-amber-50 text-amber-800 border-amber-200"
                         : bag.anomalyType === "HIGH_DENSITY_FLUID_RISK"
                         ? "bg-red-50 text-red-800 border-red-200"
                         : "bg-emerald-50 text-emerald-800 border-emerald-200"
                     }`}>
-                      {bag.anomalyType === "LOW_DENSITY_MISCLASS" ? "LOW DENSITY (PLASTIC)" : bag.anomalyType === "HIGH_DENSITY_FLUID_RISK" ? "CRITICAL FLUID LEAK" : "NORMAL DENSITY"}
+                      {bag.anomalyType === "LOW_DENSITY_MISCLASS" ? "LOW DENSITY (PLASTIC WRAP)" : bag.anomalyType === "HIGH_DENSITY_FLUID_RISK" ? "FLUID LEAK RISK" : "NORMAL DENSITY"}
                     </span>
                   </td>
                   <td className="py-3.5 px-4 whitespace-nowrap">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                       bag.quarantineStatus === "QUARANTINED"
                         ? "bg-red-100 text-red-800"
                         : "text-slate-500"
@@ -277,7 +304,7 @@ export default function AuditPage() {
 
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
-                <span className="text-slate-500">Origin Theatre:</span>
+                <span className="text-slate-500">Origin Suite:</span>
                 <p className="font-bold text-slate-900 text-sm mt-0.5">{selectedBag.theatreId} ({selectedBag.deptName})</p>
               </div>
               <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
@@ -289,7 +316,7 @@ export default function AuditPage() {
                 <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">{formatWeightKg(selectedBag.grossWeightKg)}</p>
               </div>
               <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
-                <span className="text-slate-500">Volume:</span>
+                <span className="text-slate-500">Volume (3D LiDAR):</span>
                 <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">{formatVolumeL(selectedBag.measuredVolumeL)}</p>
               </div>
             </div>
@@ -314,7 +341,7 @@ export default function AuditPage() {
               </button>
               <button
                 onClick={() => {
-                  alert(`[IPC Automated Protocol] Incident report generated for ${selectedBag.bagId}. Tagged to Infection Prevention Committee.`);
+                  alert(`[IPC Automated Protocol] Non-destructive quarantine incident report generated for ${selectedBag.bagId}. Tagged to Infection Prevention Committee.`);
                   setSelectedBag(null);
                 }}
                 className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs text-white font-bold flex items-center gap-1.5 shadow-sm"

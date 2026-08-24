@@ -8,11 +8,13 @@ import {
   Sparkles, 
   ArrowRight, 
   PackageX, 
-  LayoutGrid,
-  SearchCode,
-  ArrowLeft,
-  ShieldCheck,
-  AlertTriangle
+  LayoutGrid, 
+  SearchCode, 
+  ArrowLeft, 
+  ShieldCheck, 
+  CheckCircle2,
+  Trash2,
+  Boxes
 } from "lucide-react";
 import { 
   ResponsiveContainer, 
@@ -28,15 +30,36 @@ import {
 } from "recharts";
 import { 
   THEATRE_METRICS, 
-  getTheatreProfile 
+  getTheatreProfile,
+  REGULATORY_BIN_STREAMS
 } from "@/lib/mock-data";
 import { formatCurrencyAUD } from "@/lib/utils";
 
+const SPECIALTY_FILTERS = [
+  { id: "ALL", label: "All 12 Theatres" },
+  { id: "Orthopaedics", label: "Orthopaedics (OT_02, 03)" },
+  { id: "Neurosurgery", label: "Neurosurgery (OT_04)" },
+  { id: "General Surgery", label: "General Surgery (OT_01)" },
+  { id: "Emergency", label: "Emergency Trauma (OT_12)" },
+  { id: "Ophthal_ENT", label: "Ophthalmology & ENT (OT_08, 09)" }
+];
+
 export default function TheatresPage() {
   const [activeTab, setActiveTab] = useState<"MATRIX" | "DETAIL">("MATRIX");
+  const [selectedSpecialty, setSelectedSpecialty] = useState("ALL");
   const [selectedTheatre, setSelectedTheatre] = useState("OT_03");
 
   const activeProfile = getTheatreProfile(selectedTheatre);
+
+  const filteredTheatres = THEATRE_METRICS.filter((t) => {
+    if (selectedSpecialty === "ALL") return true;
+    if (selectedSpecialty === "Orthopaedics") return t.theatreId === "OT_02" || t.theatreId === "OT_03";
+    if (selectedSpecialty === "Neurosurgery") return t.theatreId === "OT_04";
+    if (selectedSpecialty === "General Surgery") return t.theatreId === "OT_01";
+    if (selectedSpecialty === "Emergency") return t.theatreId === "OT_12";
+    if (selectedSpecialty === "Ophthal_ENT") return t.theatreId === "OT_08" || t.theatreId === "OT_09";
+    return true;
+  });
 
   const handleSelectAndDrilldown = (theatreId: string) => {
     setSelectedTheatre(theatreId);
@@ -45,7 +68,7 @@ export default function TheatresPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-8">
-      {/* 1. Page Header & Master/Detail Tab Controls */}
+      {/* 1. Top Section & 2-Tab Navigation */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
         <div>
           <div className="text-xs text-slate-500 font-mono flex items-center gap-1.5 mb-1">
@@ -57,7 +80,7 @@ export default function TheatresPage() {
             Operating Theatre Clinical Segregation & Workflow
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Monitor hospital-wide surgical suite compliance or deep-dive into theatre-specific phase bottlenecks.
+            Specialty-level segregation index, AS/NZS 3816 bin footprint, and clinical phase workflow.
           </p>
         </div>
 
@@ -72,7 +95,7 @@ export default function TheatresPage() {
             }`}
           >
             <LayoutGrid className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>All Theatres Matrix (12 OTs)</span>
+            <span>All Theatres Matrix</span>
           </button>
 
           <button
@@ -90,15 +113,35 @@ export default function TheatresPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* TAB 1: ALL THEATRES MATRIX (Master View - 숲) */}
+      {/* TAB 1: ALL THEATRES MATRIX (with Specialty Filter Bar) */}
       {/* ========================================================================= */}
       {activeTab === "MATRIX" && (
         <div className="space-y-6 animate-fadeIn">
+          {/* Level 1: Specialty Filter Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <span className="text-xs text-slate-500 font-bold uppercase tracking-wider shrink-0 mr-1">
+              Specialty Filter:
+            </span>
+            {SPECIALTY_FILTERS.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setSelectedSpecialty(f.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
+                  selectedSpecialty === f.id
+                    ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
           {/* Quick Summary KPIs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <span className="text-xs text-slate-500 font-medium">Monitored Surgical Suites</span>
-              <p className="text-2xl font-bold text-slate-900 font-mono mt-1">12 Theatres</p>
+              <span className="text-xs text-slate-500 font-medium">Filtered Suites</span>
+              <p className="text-2xl font-bold text-slate-900 font-mono mt-1">{filteredTheatres.length} Theatres</p>
               <p className="text-[11px] text-slate-400 mt-1">Royal Adelaide Hospital</p>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -107,14 +150,14 @@ export default function TheatresPage() {
               <p className="text-[11px] text-slate-400 mt-1">Clinical Target: &lt; 25.0%</p>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <span className="text-xs text-slate-500 font-medium">Critical Packaging Priority</span>
-              <p className="text-2xl font-bold text-red-700 font-mono mt-1">2 Theatres</p>
-              <p className="text-[11px] text-red-600 font-bold mt-1">OT_03 Ortho, OT_04 Neuro</p>
+              <span className="text-xs text-slate-500 font-medium">High Packaging Priority</span>
+              <p className="text-2xl font-bold text-red-700 font-mono mt-1">OT_03 & OT_04</p>
+              <p className="text-[11px] text-red-600 font-bold mt-1">Pre-incision Setup Peak</p>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <span className="text-xs text-slate-500 font-medium">Best Practice Benchmark</span>
-              <p className="text-2xl font-bold text-emerald-700 font-mono mt-1">OT_09 (ENT)</p>
-              <p className="text-[11px] text-emerald-700 font-bold mt-1">13.8% Misclassification Rate</p>
+              <span className="text-xs text-slate-500 font-medium">Benchmark Compliance</span>
+              <p className="text-2xl font-bold text-emerald-700 font-mono mt-1">OT_08 & OT_09</p>
+              <p className="text-[11px] text-emerald-700 font-bold mt-1">&lt; 15% Misclassification</p>
             </div>
           </div>
 
@@ -126,7 +169,7 @@ export default function TheatresPage() {
                   Surgical Suites Segregation Matrix (SCI Table)
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Ranking of 12 active surgical suites based on contamination rate and packaging volume. Click any row to inspect deep-dive workflow.
+                  Click any surgical suite row to inspect detailed clinical phase distribution and EMR sign-off timeline.
                 </p>
               </div>
             </div>
@@ -136,17 +179,17 @@ export default function TheatresPage() {
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px] bg-slate-50">
                     <th className="py-3.5 px-4">Theatre ID</th>
-                    <th className="py-3.5 px-4">Department Specialty</th>
+                    <th className="py-3.5 px-4">Specialty</th>
                     <th className="py-3.5 px-4">Total Drops</th>
                     <th className="py-3.5 px-4">Misclassified Rate (SCI %)</th>
                     <th className="py-3.5 px-4">Monthly Weight</th>
                     <th className="py-3.5 px-4">Dominant Phase</th>
                     <th className="py-3.5 px-4">Status</th>
-                    <th className="py-3.5 px-4 text-right">Drilldown</th>
+                    <th className="py-3.5 px-4 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
-                  {THEATRE_METRICS.map((t) => (
+                  {filteredTheatres.map((t) => (
                     <tr 
                       key={t.theatreId} 
                       className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
@@ -205,7 +248,7 @@ export default function TheatresPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: OT DEEP-DIVE FOCUS (Detail View - 나무) */}
+      {/* TAB 2: OT DEEP-DIVE FOCUS */}
       {/* ========================================================================= */}
       {activeTab === "DETAIL" && (
         <div className="space-y-6 animate-fadeIn">
@@ -233,11 +276,11 @@ export default function TheatresPage() {
                       ? "bg-amber-50 text-amber-700 border-amber-200"
                       : "bg-emerald-50 text-emerald-700 border-emerald-200"
                   }`}>
-                    {activeProfile.sciPercentage}% Misclassification Rate
+                    {activeProfile.sciPercentage}% Misclassification
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Lead Clinician: <strong>{activeProfile.surgeonInCharge}</strong> • Avg Turnover: <strong>{activeProfile.avgTurnoverTimeMin} min</strong> • Clinical Group: <strong>{activeProfile.theatreGroupType}</strong>
+                  Lead Clinician: <strong>{activeProfile.surgeonInCharge}</strong> • Turnover: <strong>{activeProfile.avgTurnoverTimeMin} min</strong>
                 </p>
               </div>
             </div>
@@ -259,6 +302,35 @@ export default function TheatresPage() {
             </div>
           </div>
 
+          {/* EMR Surgical Count & PSSA Transport Governance Card */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  AS/NZS 3816 & Surgical Count Governance Protocol
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  All clinical waste remains inside the theatre until final instrument/swab count is officially signed off.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 text-xs font-mono shrink-0 bg-slate-50 px-3.5 py-2 rounded-lg border border-slate-200">
+              <div>
+                <span className="text-slate-400 block text-[10px]">Surgical Count Verified:</span>
+                <strong className="text-emerald-800">{activeProfile.emrTimeline.countSignedOffTime}</strong>
+              </div>
+              <span className="text-slate-300">→</span>
+              <div>
+                <span className="text-slate-400 block text-[10px]">PSSA Smart Cart Scan:</span>
+                <strong className="text-slate-900">{activeProfile.emrTimeline.pssaCollectionTime}</strong>
+              </div>
+            </div>
+          </div>
+
           {/* Deep Dive Dual Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left 1 Col: Surgical 3-Phase Donut Chart */}
@@ -269,7 +341,7 @@ export default function TheatresPage() {
                   Surgical Phase Breakdown
                 </h4>
                 <p className="text-xs text-slate-500 mb-2">
-                  Misclassification distribution across 3 surgical phases.
+                  Misclassification distribution across 3 clinical phases.
                 </p>
 
                 <div className="h-52 w-full relative flex items-center justify-center">
@@ -289,14 +361,12 @@ export default function TheatresPage() {
                       <Tooltip formatter={(value) => [`${value}% of Misclassifications`, "Ratio"]} />
                     </PieChart>
                   </ResponsiveContainer>
-                  {/* Center Donut Label */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-2xl font-bold text-amber-700 font-mono">{activeProfile.phaseDistribution[0].value}%</span>
                     <span className="text-[10px] text-slate-500 font-bold">Phase 1 Setup</span>
                   </div>
                 </div>
 
-                {/* Legend */}
                 <div className="space-y-2 text-xs mt-2">
                   {activeProfile.phaseDistribution.map((p) => (
                     <div key={p.name} className="flex items-center justify-between p-1.5 rounded bg-slate-50 border border-slate-100">
@@ -322,10 +392,10 @@ export default function TheatresPage() {
                     </h4>
                     <p className="text-xs text-slate-500 mt-0.5">
                       {activeProfile.theatreGroupType === "HIGH_PACKAGING"
-                        ? "Visual proof of clean plastic surge occurring during pre-incision sterile setup (07:30~09:00)."
+                        ? "Sterile packaging surge occurring during pre-incision setup (07:30~09:00)."
                         : activeProfile.theatreGroupType === "RAPID_TURNOVER"
-                        ? "Visual proof of post-operative co-mingling surge during rapid turnover cleanup (15:30~17:00)."
-                        : "Stable, well-segregated baseline with low packaging misclassification."}
+                        ? "Post-operative co-mingling surge during rapid turnover cleanup (15:30~17:00)."
+                        : "Stable baseline with low packaging misclassification."}
                     </p>
                   </div>
                   <div className="flex items-center gap-3 text-xs shrink-0">
