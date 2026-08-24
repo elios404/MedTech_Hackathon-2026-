@@ -8,8 +8,7 @@ import {
   Scale, 
   FileSpreadsheet, 
   ShieldCheck, 
-  Leaf,
-  Building2
+  Leaf
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +25,7 @@ const NAV_ITEMS = [
     subtext: "Clinical Phase & Flow",
     href: "/theatres",
     icon: Activity,
-    badge: "Live"
+    badge: "12 OTs"
   },
   {
     name: "Smart Cart Audit",
@@ -37,7 +36,7 @@ const NAV_ITEMS = [
   },
   {
     name: "Procurement & ESG",
-    subtext: "Contractor Invoice Audit",
+    subtext: "Contract & CPT De-bundle",
     href: "/reconciliation",
     icon: FileSpreadsheet,
     badge: null
@@ -65,17 +64,8 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Hospital Facility Node */}
-      <div className="px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 mx-3 my-3 rounded-lg">
-        <div className="flex items-center gap-2 text-slate-800 text-xs font-semibold">
-          <Building2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-          <span className="truncate">Royal Adelaide Hospital</span>
-        </div>
-        <p className="text-[10px] text-slate-500 mt-0.5 pl-5 whitespace-nowrap">SA Health • 12 Monitored OTs</p>
-      </div>
-
       {/* Navigation Menu */}
-      <nav className="flex-1 px-3 space-y-1 mt-1">
+      <nav className="flex-1 px-3 space-y-1 mt-4">
         <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
           Intelligence Views
         </div>
@@ -87,7 +77,7 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all group",
+                "flex items-center justify-between px-3 py-3 rounded-lg text-xs font-medium transition-all group",
                 isActive
                   ? "bg-emerald-50 text-emerald-900 font-semibold border border-emerald-200 shadow-sm"
                   : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
@@ -109,8 +99,8 @@ export function Sidebar() {
                 <span
                   className={cn(
                     "text-[10px] px-1.5 py-0.5 rounded-full font-mono font-semibold shrink-0 ml-1 whitespace-nowrap",
-                    item.badge === "Live"
-                      ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                    item.badge === "12 OTs"
+                      ? "bg-slate-100 text-slate-700 border border-slate-200"
                       : "bg-amber-100 text-amber-800 border border-amber-200"
                   )}
                 >

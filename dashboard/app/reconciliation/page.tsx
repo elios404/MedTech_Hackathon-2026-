@@ -3,23 +3,23 @@
 import { useState } from "react";
 import { 
   FileSpreadsheet, 
-  AlertTriangle, 
   CheckCircle2, 
   Download, 
   TrendingUp, 
   ShieldCheck, 
   PackageMinus, 
   Sparkles, 
-  Printer 
+  Printer,
+  Scale
 } from "lucide-react";
 import { VENDOR_INVOICES } from "@/lib/mock-data";
 import { formatCurrencyAUD, formatWeightKg } from "@/lib/utils";
 
 const UNUSED_CPT_ITEMS = [
   { item: "60ml Luer Lock Syringes (CPT Pack #A)", unbundledWasteKg: 420.0, lossAUD: 1470, action: "De-bundle from standard Ortho pack" },
-  { item: "Extra Medium Drape Sheet (CPT Pack #B)", unbundledWasteKg: 380.0, lossAUD: 1330, action: "Request supplier removal" },
-  { item: "Sterile Skin Marker & Ruler (CPT Pack #C)", unbundledWasteKg: 190.0, lossAUD: 665, action: "Switch to modular add-on" },
-  { item: "Plastic Kidney Dish (General Surgery Pack)", unbundledWasteKg: 240.0, lossAUD: 840, action: "Replace with reusable steel dish" },
+  { item: "Extra Medium Drape Sheet (CPT Pack #B)", unbundledWasteKg: 380.0, lossAUD: 1330, action: "Request supplier packaging removal" },
+  { item: "Sterile Skin Marker & Ruler (CPT Pack #C)", unbundledWasteKg: 190.0, lossAUD: 665, action: "Switch to modular on-demand add-on" },
+  { item: "Plastic Kidney Dish (General Surgery Pack)", unbundledWasteKg: 240.0, lossAUD: 840, action: "Replace with reusable autoclavable dish" },
 ];
 
 export default function ReconciliationPage() {
@@ -29,100 +29,106 @@ export default function ReconciliationPage() {
     setIsExporting(true);
     setTimeout(() => {
       setIsExporting(false);
-      alert("[SA Health Green Theatres Report] PDF audit summary successfully generated for Royal Adelaide Hospital Q3 Audit.");
+      alert("[SA Health Green Theatres Report] Verified ESG & Weight Reconciliation Summary successfully generated for Royal Adelaide Hospital Q3 Audit.");
     }, 1200);
   };
 
   const totalVarianceAUD = VENDOR_INVOICES.reduce((sum, inv) => sum + inv.varianceAUD, 0);
-  const totalOverbilledKg = VENDOR_INVOICES.reduce((sum, inv) => sum + (inv.invoicedWeightKg - inv.actualWeightKg), 0);
+  const totalAuditedKg = VENDOR_INVOICES.reduce((sum, inv) => sum + inv.actualWeightKg, 0);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Title */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-8 max-w-7xl mx-auto pb-8">
+      {/* 1. Page Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
         <div>
           <div className="text-xs text-slate-500 font-mono flex items-center gap-1.5 mb-1">
             <span>Hospital Administration</span>
             <span>/</span>
-            <span className="text-slate-800 font-semibold">Procurement & ESG</span>
+            <span className="text-slate-800 font-semibold">Procurement & ESG Governance</span>
           </div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-            Vendor Invoice Audit, De-bundling & Scope 3 ESG
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+            Contract Weight Reconciliation, De-bundling & Verified ESG
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Cross-verify contracted disposal bills against Tier 2 audited weight and generate government ESG reports.
+          <p className="text-xs text-slate-500 mt-1">
+            Cross-verify contracted disposal bills against Tier 2 audited weight ledgers and optimize surgical pack procurement.
           </p>
         </div>
 
-        {/* Export Button */}
+        {/* Export ESG Certificate */}
         <button
           onClick={handleExportPDF}
           disabled={isExporting}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow transition-all self-start md:self-auto disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all self-start md:self-auto disabled:opacity-50"
         >
           {isExporting ? <Printer className="w-4 h-4 animate-spin shrink-0" /> : <Download className="w-4 h-4 shrink-0" />}
           <span className="whitespace-nowrap">{isExporting ? "Generating SA Health PDF..." : "Export Green Theatres ESG Report"}</span>
         </button>
       </div>
 
-      {/* 1. Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between text-slate-600 text-xs mb-2">
-            <span className="font-medium">Total Overbilled Discrepancy</span>
-            <span className="text-amber-800 font-mono text-[11px] font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 whitespace-nowrap">
-              Flagged (Cleanaway)
-            </span>
+      {/* 2. Top Reconciliation Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-slate-500 text-xs mb-2">
+              <span className="font-semibold uppercase tracking-wider text-[10px]">Reconciliation Adjustment</span>
+              <span className="text-emerald-800 font-mono text-xs font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 whitespace-nowrap">
+                Audit Difference
+              </span>
+            </div>
+            <div className="text-3xl font-bold text-emerald-700 tracking-tight font-mono">
+              {formatCurrencyAUD(totalVarianceAUD)}
+            </div>
           </div>
-          <div className="text-2xl font-bold text-amber-700 tracking-tight font-mono">
-            {formatCurrencyAUD(totalVarianceAUD)}
-          </div>
-          <p className="text-[11px] text-slate-500 mt-2 border-t border-slate-100 pt-2">
-            Audit delta between vendor invoice and smart cart real load-cell scale.
+          <p className="text-xs text-slate-500 mt-4 border-t border-slate-100 pt-3">
+            Digital ledger variance between contracted invoices and load-cell certified weight.
           </p>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between text-slate-600 text-xs mb-2">
-            <span className="font-medium">Unverified Invoiced Weight</span>
-            <span className="text-red-800 font-mono text-[11px] font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-200 whitespace-nowrap">
-              +11.2% Overstatement
-            </span>
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-slate-500 text-xs mb-2">
+              <span className="font-semibold uppercase tracking-wider text-[10px]">Tier 2 Audited Weight</span>
+              <span className="text-slate-800 font-mono text-xs font-bold bg-slate-100 px-2 py-0.5 rounded whitespace-nowrap">
+                Certified Scale
+              </span>
+            </div>
+            <div className="text-3xl font-bold text-slate-900 tracking-tight font-mono">
+              {formatWeightKg(totalAuditedKg)}
+            </div>
           </div>
-          <div className="text-2xl font-bold text-red-700 tracking-tight font-mono">
-            {formatWeightKg(totalOverbilledKg)}
-          </div>
-          <p className="text-[11px] text-slate-500 mt-2 border-t border-slate-100 pt-2">
-            Direct grounds for vendor invoice deduction & contractual reconciliation.
+          <p className="text-xs text-slate-500 mt-4 border-t border-slate-100 pt-3">
+            Load-cell smart cart audited baseline for quarterly contract alignment.
           </p>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between text-slate-600 text-xs mb-2">
-            <span className="font-medium">Procurement De-bundling Potential</span>
-            <span className="text-emerald-800 font-mono text-[11px] font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 whitespace-nowrap">
-              CPT Pack Savings
-            </span>
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-slate-500 text-xs mb-2">
+              <span className="font-semibold uppercase tracking-wider text-[10px]">Procurement De-bundling Value</span>
+              <span className="text-emerald-800 font-mono text-xs font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 whitespace-nowrap">
+                CPT Pack Savings
+              </span>
+            </div>
+            <div className="text-3xl font-bold text-emerald-700 tracking-tight font-mono">
+              {formatCurrencyAUD(4305)} <span className="text-sm font-normal text-slate-500">/mo</span>
+            </div>
           </div>
-          <div className="text-2xl font-bold text-emerald-700 tracking-tight font-mono">
-            {formatCurrencyAUD(4305)} <span className="text-xs font-normal text-slate-500">/mo</span>
-          </div>
-          <p className="text-[11px] text-slate-500 mt-2 border-t border-slate-100 pt-2">
+          <p className="text-xs text-slate-500 mt-4 border-t border-slate-100 pt-3">
             4 redundant surgical pack components identified for supplier removal.
           </p>
         </div>
       </div>
 
-      {/* 2. Vendor Invoice Reconciliation Table */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
+      {/* 3. Contractor Weight Ledger Verification Table */}
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex items-center justify-between mb-5">
           <div>
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
-              Contracted Disposal Contractor Billing Audit (Cleanaway vs Daniels Health)
+              Disposal Contractor Weight Reconciliation Ledger (Cleanaway & Daniels Health)
             </h3>
-            <p className="text-xs text-slate-500">
-              Audited using Tier 2 RFID Smart Cart digital weight ledger.
+            <p className="text-xs text-slate-500 mt-0.5">
+              Comparative balance sheet matching vendor invoiced metrics against internal Tier 2 RFID load-cell records.
             </p>
           </div>
         </div>
@@ -131,37 +137,37 @@ export default function ReconciliationPage() {
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px] bg-slate-50">
-                <th className="py-3 px-4">Billing Period</th>
-                <th className="py-3 px-4">Contracted Vendor</th>
-                <th className="py-3 px-4">Tier 2 Audited Weight</th>
-                <th className="py-3 px-4">Vendor Invoiced Weight</th>
-                <th className="py-3 px-4">Audited Amount</th>
-                <th className="py-3 px-4">Invoiced Amount</th>
-                <th className="py-3 px-4">Variance ($AUD)</th>
-                <th className="py-3 px-4">Audit Status</th>
+                <th className="py-3.5 px-4">Billing Period</th>
+                <th className="py-3.5 px-4">Contracted Partner</th>
+                <th className="py-3.5 px-4">Audited Weight</th>
+                <th className="py-3.5 px-4">Invoiced Weight</th>
+                <th className="py-3.5 px-4">Audited Amount</th>
+                <th className="py-3.5 px-4">Invoiced Amount</th>
+                <th className="py-3.5 px-4">Reconciliation Variance</th>
+                <th className="py-3.5 px-4">Audit Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {VENDOR_INVOICES.map((inv, idx) => (
                 <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-3 px-4 font-mono font-semibold text-slate-900 whitespace-nowrap">{inv.billingPeriod}</td>
-                  <td className="py-3 px-4 font-bold text-slate-900 whitespace-nowrap">{inv.vendorName}</td>
-                  <td className="py-3 px-4 font-mono whitespace-nowrap">{formatWeightKg(inv.actualWeightKg)}</td>
-                  <td className="py-3 px-4 font-mono font-bold text-amber-700 whitespace-nowrap">{formatWeightKg(inv.invoicedWeightKg)}</td>
-                  <td className="py-3 px-4 font-mono whitespace-nowrap">{formatCurrencyAUD(inv.calculatedAmountAUD)}</td>
-                  <td className="py-3 px-4 font-mono font-bold text-slate-900 whitespace-nowrap">{formatCurrencyAUD(inv.invoicedAmountAUD)}</td>
-                  <td className="py-3 px-4 font-mono font-bold whitespace-nowrap">
-                    <span className={inv.varianceAUD > 500 ? "text-red-700" : "text-emerald-700"}>
-                      +{formatCurrencyAUD(inv.varianceAUD)}
+                  <td className="py-3.5 px-4 font-mono font-bold text-slate-900 whitespace-nowrap">{inv.billingPeriod}</td>
+                  <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">{inv.vendorName}</td>
+                  <td className="py-3.5 px-4 font-mono whitespace-nowrap">{formatWeightKg(inv.actualWeightKg)}</td>
+                  <td className="py-3.5 px-4 font-mono font-bold text-slate-900 whitespace-nowrap">{formatWeightKg(inv.invoicedWeightKg)}</td>
+                  <td className="py-3.5 px-4 font-mono whitespace-nowrap">{formatCurrencyAUD(inv.calculatedAmountAUD)}</td>
+                  <td className="py-3.5 px-4 font-mono font-bold text-slate-900 whitespace-nowrap">{formatCurrencyAUD(inv.invoicedAmountAUD)}</td>
+                  <td className="py-3.5 px-4 font-mono font-bold whitespace-nowrap">
+                    <span className={inv.varianceAUD > 500 ? "text-amber-700" : "text-emerald-700"}>
+                      {formatCurrencyAUD(inv.varianceAUD)}
                     </span>
                   </td>
-                  <td className="py-3 px-4 whitespace-nowrap">
+                  <td className="py-3.5 px-4 whitespace-nowrap">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
                       inv.auditStatus === "FLAGGED_DISCREPANCY"
-                        ? "bg-red-50 text-red-700 border-red-200"
-                        : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        ? "bg-amber-50 text-amber-800 border-amber-200"
+                        : "bg-emerald-50 text-emerald-800 border-emerald-200"
                     }`}>
-                      {inv.auditStatus === "FLAGGED_DISCREPANCY" ? "FLAGGED: OVERBILLING" : "VERIFIED ACCURATE"}
+                      {inv.auditStatus === "FLAGGED_DISCREPANCY" ? "ADJUSTMENT PENDING" : "VERIFIED ALIGNED"}
                     </span>
                   </td>
                 </tr>
@@ -171,16 +177,16 @@ export default function ReconciliationPage() {
         </div>
       </div>
 
-      {/* 3. Procurement De-bundling Insights (CPT Surgery Packs) */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+      {/* 4. Procurement De-bundling Recommendations */}
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <PackageMinus className="w-4 h-4 text-amber-600 shrink-0" />
-              Surgical Pack (CPT) Redundant Component De-bundling Recommendations
+              Surgical Pack (CPT) Redundant Component De-bundling Opportunities
             </h3>
-            <p className="text-xs text-slate-500">
-              Components identified by Tier 1 Vision as discarded untouched directly from sterile packaging.
+            <p className="text-xs text-slate-500 mt-0.5">
+              Sterile items identified as discarded untouched directly from outer packaging. Recommended for supplier pack exclusion.
             </p>
           </div>
         </div>
@@ -198,8 +204,8 @@ export default function ReconciliationPage() {
                 Monthly Discarded Volume: <strong className="text-slate-900">{item.unbundledWasteKg} kg</strong> (100% Uncontaminated)
               </p>
               <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs">
-                <span className="text-slate-500 text-[11px]">Recommended Action:</span>
-                <span className="text-amber-800 font-semibold text-[11px] truncate ml-1">{item.action}</span>
+                <span className="text-slate-500 text-[11px]">Recommended Procurement Action:</span>
+                <span className="text-emerald-800 font-bold text-[11px] truncate ml-1">{item.action}</span>
               </div>
             </div>
           ))}
