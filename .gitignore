@@ -1,0 +1,65 @@
+# === Operating System ===
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# === Python & Virtual Environments ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.ruff_cache/
+.venv/
+env/
+venv/
+
+# === Machine Learning & Weights ===
+runs/
+weights/
+*.onnx
+yolov8*.pt
+!models/medwaste_yolov8_cls.pt
+
+# === Next.js & Frontend (dashboard) ===
+dashboard/.next/
+dashboard/out/
+dashboard/build/
+dashboard/node_modules/
+node_modules/
+*.tsbuildinfo
+.next/
+out/
+.npm/
+
+# === Data & Test Artifacts ===
+data/
+test_results/
+*.log
+
+# === Environment Variables & Local Configs ===
+.env
+.env*.local
+.idea/
+.vscode/
+*.swp
