@@ -7,8 +7,11 @@ import {
   ShieldAlert, 
   X, 
   FileText, 
+  CheckCircle2,
+  Lock,
   Layers,
-  Sparkles
+  Sparkles,
+  Info
 } from "lucide-react";
 import { 
   ResponsiveContainer, 
@@ -19,19 +22,17 @@ import {
   ZAxis, 
   Tooltip, 
   CartesianGrid, 
-  ReferenceLine,
-  ReferenceArea
+  ReferenceLine 
 } from "recharts";
 import { 
   SMART_CART_AUDIT_LOGS, 
-  BULK_DENSITY_SCATTER_DATA,
+  SPECIALTY_SCATTER_DATA,
   SPECIALTY_DENSITY_RULES
 } from "@/lib/mock-data";
 import { Tier2BagAudit } from "@/types/waste";
 import { formatCurrencyAUD, formatDensity, formatWeightKg, formatVolumeL } from "@/lib/utils";
 
 const SPECIALTIES = [
-  "All Specialties",
   "Orthopaedics",
   "Neurosurgery",
   "General Surgery",
@@ -41,12 +42,11 @@ const SPECIALTIES = [
 
 export default function AuditPage() {
   const [selectedBag, setSelectedBag] = useState<Tier2BagAudit | null>(null);
-  const [selectedSpecialty, setSelectedSpecialty] = useState<string>("All Specialties");
+  const [selectedSpecialty, setSelectedSpecialty] = useState<string>("Orthopaedics");
   const [filterType, setFilterType] = useState<string>("ALL");
 
-  const activeRule = selectedSpecialty !== "All Specialties" && SPECIALTY_DENSITY_RULES[selectedSpecialty]
-    ? SPECIALTY_DENSITY_RULES[selectedSpecialty]
-    : SPECIALTY_DENSITY_RULES["Orthopaedics"];
+  const activeRule = SPECIALTY_DENSITY_RULES[selectedSpecialty] || SPECIALTY_DENSITY_RULES["Orthopaedics"];
+  const currentScatterPoints = SPECIALTY_SCATTER_DATA[selectedSpecialty] || SPECIALTY_SCATTER_DATA["Orthopaedics"];
 
   const filteredLogs = SMART_CART_AUDIT_LOGS.filter((b) => {
     if (filterType === "ALL") return true;
@@ -54,11 +54,6 @@ export default function AuditPage() {
     if (filterType === "LOW_DENSITY") return b.anomalyType === "LOW_DENSITY_MISCLASS";
     if (filterType === "HIGH_DENSITY") return b.anomalyType === "HIGH_DENSITY_FLUID_RISK";
     return true;
-  });
-
-  const scatterData = BULK_DENSITY_SCATTER_DATA.filter((p) => {
-    if (selectedSpecialty === "All Specialties") return true;
-    return p.specialty === selectedSpecialty;
   });
 
   return (
@@ -86,42 +81,45 @@ export default function AuditPage() {
         </div>
       </div>
 
-      {/* 2. Specialty Selector & Dynamic Bulk Density Scatter Plot */}
+      {/* 2. Specialty Selector & Dynamic Bulk Density Scatter Plot (No 'All Specialties') */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: Scatter Plot */}
         <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div>
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <Scale className="w-4 h-4 text-emerald-600 shrink-0" />
-                Physical Bulk Density Distribution (&rho; = kg/L)
+                Physical Bulk Density Distribution (&rho; = kg/L) — {selectedSpecialty}
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Dynamic normal density band adapting to surgical specialty physics.
+                Each point represents an audited waste bag. Expected range: <strong>{activeRule.expectedMinDensity} ~ {activeRule.expectedMaxDensity} kg/L</strong>
               </p>
             </div>
 
-            {/* Specialty Switcher */}
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-xs self-start">
-              <span className="text-slate-500 font-medium">Specialty Focus:</span>
-              <select
-                value={selectedSpecialty}
-                onChange={(e) => setSelectedSpecialty(e.target.value)}
-                className="bg-transparent font-bold text-slate-900 focus:outline-none cursor-pointer text-xs"
-              >
-                {SPECIALTIES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
+            {/* Specialty Switcher (Specific Specialties Only) */}
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 p-1 rounded-lg text-xs self-start shrink-0">
+              {SPECIALTIES.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSelectedSpecialty(s)}
+                  className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+                    selectedSpecialty === s
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  {s.replace(" & ENT", "").replace(" Surgery", "")}
+                </button>
+              ))}
             </div>
           </div>
 
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: -10 }}>
+              <ScatterChart margin={{ top: 15, right: 20, bottom: 10, left: -10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" opacity={0.8} />
-                <XAxis type="number" dataKey="volume" name="Volume" unit="L" stroke="#64748B" fontSize={11} domain={[0, 70]} />
-                <YAxis type="number" dataKey="weight" name="Weight" unit="kg" stroke="#64748B" fontSize={11} domain={[0, 22]} />
+                <XAxis type="number" dataKey="volume" name="Volume" unit="L" stroke="#64748B" fontSize={11} domain={[0, 60]} />
+                <YAxis type="number" dataKey="weight" name="Weight" unit="kg" stroke="#64748B" fontSize={11} domain={[0, 25]} />
                 <ZAxis range={[50, 150]} />
                 <Tooltip 
                   cursor={{ strokeDasharray: "3 3" }} 
@@ -131,20 +129,21 @@ export default function AuditPage() {
                       return (
                         <div className="bg-white p-3 rounded-lg border border-slate-200 text-xs shadow-lg space-y-1">
                           <p className="font-bold text-slate-900">{data.label}</p>
-                          <p className="text-slate-600">Specialty: <strong>{data.specialty}</strong></p>
                           <p className="text-slate-600">Weight: <strong className="text-slate-900">{data.weight} kg</strong></p>
-                          <p className="text-slate-600">Volume: <strong className="text-slate-900">{data.volume} L</strong></p>
-                          <p className="text-slate-600">Density: <strong className="text-emerald-700">{data.density.toFixed(3)} kg/L</strong></p>
-                          <p className="text-[10px] uppercase font-mono font-bold text-amber-700 mt-1">{data.type}</p>
+                          <p className="text-slate-600">Volume (3D LiDAR): <strong className="text-slate-900">{data.volume} L</strong></p>
+                          <p className="text-slate-600">Bulk Density: <strong className={data.density < activeRule.lowDensityThreshold ? "text-red-700" : "text-emerald-700"}>{data.density.toFixed(3)} kg/L</strong></p>
+                          <p className={`text-[10px] uppercase font-mono font-bold mt-1 ${data.type === "NORMAL" ? "text-emerald-700" : "text-amber-700"}`}>
+                            Finding: {data.type.replace(/_/g, " ")}
+                          </p>
                         </div>
                       );
                     }
                     return null;
                   }}
                 />
-                {/* Dynamic Boundary Line */}
-                <ReferenceLine y={4.0} stroke="#D97706" strokeDasharray="4 4" label={{ value: `Packaging Misclassification Threshold (< ${activeRule.lowDensityThreshold} kg/L)`, fill: "#D97706", fontSize: 10 }} />
-                <Scatter name="Waste Bags" data={scatterData} fill="#059669" />
+                {/* Packaging Threshold Reference Line */}
+                <ReferenceLine y={activeRule.lowDensityThreshold * 50} stroke="#D97706" strokeDasharray="4 4" label={{ value: `Packaging Misclassification Threshold (< ${activeRule.lowDensityThreshold} kg/L)`, fill: "#D97706", fontSize: 10 }} />
+                <Scatter name="Audited Bags" data={currentScatterPoints} fill="#059669" />
               </ScatterChart>
             </ResponsiveContainer>
           </div>
@@ -169,8 +168,8 @@ export default function AuditPage() {
             </div>
 
             <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-900 leading-relaxed">
-              <strong className="block mb-0.5">3D LiDAR Volume Measurement:</strong>
-              Smart Cart calculates actual displacement volume, avoiding false positives caused by partially filled (50% fill rate) bags.
+              <strong className="block mb-0.5">3D LiDAR Non-Destructive Volume Audit:</strong>
+              Smart Cart calculates actual volume displacement, preventing false positives caused by partially filled (50% fill rate) bags without manual unsealing.
             </div>
           </div>
 
@@ -182,20 +181,21 @@ export default function AuditPage() {
         </div>
       </div>
 
-      {/* 3. Audit Log Table */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+      {/* 3. Clearly Explained Non-Destructive Bag Quarantine Log */}
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
           <div>
-            <h3 className="text-base font-bold text-slate-900">
-              Smart Cart Real-Time Weigh-in Logs
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+              Tier 2 Smart Cart Non-Destructive Bag Quarantine Log (비파괴 스마트 카트 봉투 격리 대장)
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Select any bag to view RFID chain-of-custody and isolation drawer.
+            <p className="text-xs text-slate-500 mt-1">
+              Corridor-level audit records collected by PSSA smart carts upon case completion. Bags failing physics baseline density are automatically quarantined without opening seals.
             </p>
           </div>
 
           {/* Filter Pills */}
-          <div className="flex items-center gap-1.5 text-xs bg-slate-100 p-1 rounded-lg border border-slate-200 self-start">
+          <div className="flex items-center gap-1.5 text-xs bg-slate-100 p-1 rounded-lg border border-slate-200 self-start shrink-0">
             {["ALL", "ANOMALY", "LOW_DENSITY", "HIGH_DENSITY"].map((f) => (
               <button
                 key={f}
@@ -220,10 +220,10 @@ export default function AuditPage() {
                 <th className="py-3.5 px-4">Origin Suite</th>
                 <th className="py-3.5 px-4">Bin Stream</th>
                 <th className="py-3.5 px-4">Gross Weight</th>
-                <th className="py-3.5 px-4">Volume</th>
+                <th className="py-3.5 px-4">3D Volume</th>
                 <th className="py-3.5 px-4">Bulk Density</th>
-                <th className="py-3.5 px-4">Anomaly Flag</th>
-                <th className="py-3.5 px-4">Status</th>
+                <th className="py-3.5 px-4">Audit Finding</th>
+                <th className="py-3.5 px-4">Quarantine Status</th>
                 <th className="py-3.5 px-4 text-right">Inspect</th>
               </tr>
             </thead>
@@ -264,7 +264,7 @@ export default function AuditPage() {
                   <td className="py-3.5 px-4 whitespace-nowrap">
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                       bag.quarantineStatus === "QUARANTINED"
-                        ? "bg-red-100 text-red-800"
+                        ? "bg-red-100 text-red-800 border border-red-200"
                         : "text-slate-500"
                     }`}>
                       {bag.quarantineStatus}

@@ -12,9 +12,11 @@ import {
   SearchCode, 
   ArrowLeft, 
   ShieldCheck, 
-  CheckCircle2,
+  AlertTriangle,
+  Layers,
   Trash2,
-  Boxes
+  Boxes,
+  Stethoscope
 } from "lucide-react";
 import { 
   ResponsiveContainer, 
@@ -35,19 +37,20 @@ import {
 } from "@/lib/mock-data";
 import { formatCurrencyAUD } from "@/lib/utils";
 
-const SPECIALTY_FILTERS = [
-  { id: "ALL", label: "All 12 Theatres" },
-  { id: "Orthopaedics", label: "Orthopaedics (OT_02, 03)" },
-  { id: "Neurosurgery", label: "Neurosurgery (OT_04)" },
-  { id: "General Surgery", label: "General Surgery (OT_01)" },
-  { id: "Emergency", label: "Emergency Trauma (OT_12)" },
-  { id: "Ophthal_ENT", label: "Ophthalmology & ENT (OT_08, 09)" }
+const SPECIALTY_SEGMENTS = [
+  { id: "ALL", label: "All 12 Theatres", count: "12 OTs", desc: "Hospital-wide" },
+  { id: "Orthopaedics", label: "Orthopaedics", count: "2 OTs", desc: "OT_02, OT_03" },
+  { id: "Neurosurgery", label: "Neurosurgery", count: "1 OT", desc: "OT_04" },
+  { id: "General Surgery", label: "General Surgery", count: "1 OT", desc: "OT_01" },
+  { id: "Emergency", label: "Emergency Trauma", count: "1 OT", desc: "OT_12" },
+  { id: "Ophthal_ENT", label: "Ophthal & ENT", count: "2 OTs", desc: "OT_08, OT_09" }
 ];
 
 export default function TheatresPage() {
   const [activeTab, setActiveTab] = useState<"MATRIX" | "DETAIL">("MATRIX");
   const [selectedSpecialty, setSelectedSpecialty] = useState("ALL");
   const [selectedTheatre, setSelectedTheatre] = useState("OT_03");
+  const [selectedBinStreamMode, setSelectedBinStreamMode] = useState<"ALL" | "YELLOW" | "CLEAR" | "WHITE">("ALL");
 
   const activeProfile = getTheatreProfile(selectedTheatre);
 
@@ -113,28 +116,49 @@ export default function TheatresPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* TAB 1: ALL THEATRES MATRIX (with Specialty Filter Bar) */}
+      {/* TAB 1: ALL THEATRES MATRIX (with Rich Segmented Specialty Cards) */}
       {/* ========================================================================= */}
       {activeTab === "MATRIX" && (
         <div className="space-y-6 animate-fadeIn">
-          {/* Level 1: Specialty Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            <span className="text-xs text-slate-500 font-bold uppercase tracking-wider shrink-0 mr-1">
-              Specialty Filter:
-            </span>
-            {SPECIALTY_FILTERS.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setSelectedSpecialty(f.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
-                  selectedSpecialty === f.id
-                    ? "bg-slate-900 text-white border-slate-900 shadow-sm"
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
+          {/* Level 1: Enhanced Specialty Segmented Card Bar */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Stethoscope className="w-3.5 h-3.5 text-emerald-600" />
+                Select Surgical Specialty Category
+              </span>
+              <span className="text-[11px] text-slate-400 font-mono">12 Monitored Suites Total</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+              {SPECIALTY_SEGMENTS.map((seg) => {
+                const isSelected = selectedSpecialty === seg.id;
+                return (
+                  <button
+                    key={seg.id}
+                    onClick={() => setSelectedSpecialty(seg.id)}
+                    className={`p-3 rounded-xl text-left transition-all border flex flex-col justify-between ${
+                      isSelected
+                        ? "bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-emerald-500/20"
+                        : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                          isSelected ? "bg-slate-800 text-emerald-400" : "bg-slate-100 text-slate-600"
+                        }`}>
+                          {seg.count}
+                        </span>
+                      </div>
+                      <p className="font-bold text-xs mt-2 tracking-tight truncate">{seg.label}</p>
+                    </div>
+                    <p className={`text-[10px] mt-1 truncate ${isSelected ? "text-slate-300" : "text-slate-400"}`}>
+                      {seg.desc}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Quick Summary KPIs */}
@@ -276,7 +300,7 @@ export default function TheatresPage() {
                       ? "bg-amber-50 text-amber-700 border-amber-200"
                       : "bg-emerald-50 text-emerald-700 border-emerald-200"
                   }`}>
-                    {activeProfile.sciPercentage}% Misclassification
+                    {activeProfile.sciPercentage}% Misclassification Rate
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">
@@ -333,7 +357,7 @@ export default function TheatresPage() {
 
           {/* Deep Dive Dual Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left 1 Col: Surgical 3-Phase Donut Chart */}
+            {/* Left 1 Col: Surgical 3-Phase Donut Chart (No Center Text Collision!) */}
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
               <div>
                 <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-1">
@@ -344,13 +368,14 @@ export default function TheatresPage() {
                   Misclassification distribution across 3 clinical phases.
                 </p>
 
-                <div className="h-52 w-full relative flex items-center justify-center">
+                {/* Clean Donut Chart without Center Text Collision */}
+                <div className="h-48 w-full flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={activeProfile.phaseDistribution}
-                        innerRadius={55}
-                        outerRadius={80}
+                        innerRadius={50}
+                        outerRadius={75}
                         paddingAngle={4}
                         dataKey="value"
                       >
@@ -361,69 +386,86 @@ export default function TheatresPage() {
                       <Tooltip formatter={(value) => [`${value}% of Misclassifications`, "Ratio"]} />
                     </PieChart>
                   </ResponsiveContainer>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-bold text-amber-700 font-mono">{activeProfile.phaseDistribution[0].value}%</span>
-                    <span className="text-[10px] text-slate-500 font-bold">Phase 1 Setup</span>
-                  </div>
                 </div>
 
-                <div className="space-y-2 text-xs mt-2">
+                {/* Dedicated Phase List Items (Clear & Non-overlapping) */}
+                <div className="space-y-2 text-xs mt-3">
                   {activeProfile.phaseDistribution.map((p) => (
-                    <div key={p.name} className="flex items-center justify-between p-1.5 rounded bg-slate-50 border border-slate-100">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
-                        <span className="text-slate-700 font-medium">{p.name}</span>
+                    <div key={p.name} className="p-2 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+                          <span className="text-slate-800 font-bold">{p.name}</span>
+                        </div>
+                        <span className="font-mono font-bold text-slate-900">{p.value}%</span>
                       </div>
-                      <span className="font-mono font-bold text-slate-900">{p.value}%</span>
+                      <p className="text-[10px] text-slate-500 pl-4">{p.desc}</p>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* Right 2 Cols: Hourly Influx Timeline Area Chart */}
+            {/* Right 2 Cols: Hourly Stream Influx Timeline with 3-Bin Filter */}
             <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
               <div>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                   <div>
                     <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                       <Activity className="w-4 h-4 text-emerald-600" />
-                      Hourly Waste Influx & Composition ({activeProfile.theatreId})
+                      Hourly Waste Influx & Bin Stream Composition ({activeProfile.theatreId})
                     </h4>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      {activeProfile.theatreGroupType === "HIGH_PACKAGING"
-                        ? "Sterile packaging surge occurring during pre-incision setup (07:30~09:00)."
-                        : activeProfile.theatreGroupType === "RAPID_TURNOVER"
-                        ? "Post-operative co-mingling surge during rapid turnover cleanup (15:30~17:00)."
-                        : "Stable baseline with low packaging misclassification."}
+                      Units: <strong>Events / Hour (투기 횟수)</strong>. Monitor stream-specific flow and yellow bin misclassification spikes.
                     </p>
                   </div>
-                  <div className="flex items-center gap-3 text-xs shrink-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded bg-emerald-500" />
-                      <span className="text-slate-700 font-medium">Clean Plastic</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded bg-amber-500" />
-                      <span className="text-slate-700 font-medium">Paper/Box</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded bg-red-500" />
-                      <span className="text-slate-700 font-medium">Biohazard</span>
-                    </div>
+
+                  {/* 3-Bin Stream Mode Filter */}
+                  <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs self-start shrink-0">
+                    {[
+                      { id: "ALL", label: "All Streams" },
+                      { id: "YELLOW", label: "Yellow Bin (Clinical)" },
+                      { id: "WHITE", label: "White Bin (Recycle)" }
+                    ].map((b) => (
+                      <button
+                        key={b.id}
+                        onClick={() => setSelectedBinStreamMode(b.id as any)}
+                        className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+                          selectedBinStreamMode === b.id
+                            ? "bg-white text-slate-900 shadow-sm"
+                            : "text-slate-500 hover:text-slate-900"
+                        }`}
+                      >
+                        {b.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
                 <div className="h-60 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={activeProfile.hourlyTimeline} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <AreaChart data={activeProfile.hourlyStreamTimeline} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" opacity={0.8} />
                       <XAxis dataKey="time" stroke="#64748B" fontSize={11} tickLine={false} />
-                      <YAxis stroke="#64748B" fontSize={11} tickLine={false} />
+                      <YAxis stroke="#64748B" fontSize={11} tickLine={false} label={{ value: "Events / hr", angle: -90, position: "insideLeft", fontSize: 10, fill: "#94A3B8" }} />
                       <Tooltip />
-                      <Area type="monotone" dataKey="cleanPlastics" stackId="1" stroke="#059669" fill="#10B981" fillOpacity={0.5} name="Clean Plastics (Recyclable)" />
-                      <Area type="monotone" dataKey="paperBox" stackId="1" stroke="#D97706" fill="#F59E0B" fillOpacity={0.5} name="Clean Paper / Boxes" />
-                      <Area type="monotone" dataKey="biohazard" stackId="1" stroke="#DC2626" fill="#EF4444" fillOpacity={0.5} name="True Biohazard" />
+                      {selectedBinStreamMode === "ALL" && (
+                        <>
+                          <Area type="monotone" dataKey="whiteBinDrops" stackId="1" stroke="#059669" fill="#10B981" fillOpacity={0.5} name="White Bin (Clean Recyclables)" />
+                          <Area type="monotone" dataKey="clearBinDrops" stackId="1" stroke="#64748B" fill="#94A3B8" fillOpacity={0.4} name="Clear Bin (General Dry Waste)" />
+                          <Area type="monotone" dataKey="yellowBinDrops" stackId="1" stroke="#D97706" fill="#F59E0B" fillOpacity={0.5} name="Yellow Bin (Total Influx)" />
+                          <Area type="monotone" dataKey="yellowMisclassDrops" stroke="#DC2626" fill="#EF4444" fillOpacity={0.7} name="Yellow Bin MISCLASSIFICATION (Clean Plastic in Yellow!)" />
+                        </>
+                      )}
+                      {selectedBinStreamMode === "YELLOW" && (
+                        <>
+                          <Area type="monotone" dataKey="yellowBinDrops" stroke="#D97706" fill="#F59E0B" fillOpacity={0.5} name="Yellow Bin (Total Influx)" />
+                          <Area type="monotone" dataKey="yellowMisclassDrops" stroke="#DC2626" fill="#EF4444" fillOpacity={0.8} name="Clean Plastic Misclassified in Yellow Bin (Budget Leak!)" />
+                        </>
+                      )}
+                      {selectedBinStreamMode === "WHITE" && (
+                        <Area type="monotone" dataKey="whiteBinDrops" stroke="#059669" fill="#10B981" fillOpacity={0.6} name="White Bin (Clean Recyclables Diverted)" />
+                      )}
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -442,7 +484,7 @@ export default function TheatresPage() {
             </div>
           </div>
 
-          {/* Top 4 Misclassified Disposables for this OT */}
+          {/* Top 4 Misclassified Disposables */}
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div>

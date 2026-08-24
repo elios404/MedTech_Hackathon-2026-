@@ -28,7 +28,6 @@ export default function OverviewPage() {
   const [selectedPeriodKey, setSelectedPeriodKey] = useState("August 2026 (Live MTD)");
   const [showAllDeptsModal, setShowAllDeptsModal] = useState(false);
 
-  // Sync with global header period selector
   useEffect(() => {
     const handlePeriodChange = (e: any) => {
       if (e.detail) {
@@ -67,17 +66,17 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {/* 2. Top-Tier KPI Cards (No Ellipsis Truncation & Pristine 2-Line Meta Layout) */}
+      {/* 2. Top-Tier KPI Cards (Precision Edge Padding - No Pill Overflow) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Card 1: Total Waste Generated */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[160px]">
+        {/* Card 1: Total Waste */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[160px] overflow-hidden">
           <div>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Total Waste Generated
+            <div className="flex items-center justify-between gap-1.5 mb-3">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[105px]">
+                Total Waste
               </span>
-              <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                <ArrowDownRight className="w-3.5 h-3.5" /> -8.4% YoY
+              <span className="inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <ArrowDownRight className="w-3 h-3 shrink-0" /> -8.4% YoY
               </span>
             </div>
             <div className="text-3xl font-bold text-slate-900 tracking-tight font-mono">
@@ -91,13 +90,13 @@ export default function OverviewPage() {
         </div>
 
         {/* Card 2: Biohazard Ratio */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[160px]">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[160px] overflow-hidden">
           <div>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+            <div className="flex items-center justify-between gap-1.5 mb-3">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[105px]">
                 Biohazard Ratio
               </span>
-              <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
+              <span className="inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
                 +{(currentStats.yellowBiohazardRatioPercent - currentStats.yellowTargetRatioPercent).toFixed(1)}% vs Cap
               </span>
             </div>
@@ -114,15 +113,15 @@ export default function OverviewPage() {
           </div>
         </div>
 
-        {/* Card 3: Misclassification Cost Loss */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[160px]">
+        {/* Card 3: Cost Loss */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[160px] overflow-hidden">
           <div>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Misclassification Cost Loss
+            <div className="flex items-center justify-between gap-1.5 mb-3">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[105px]">
+                Cost Leak Loss
               </span>
-              <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-red-50 text-red-800 border border-red-200">
-                <ArrowUpRight className="w-3.5 h-3.5" /> Budget Leak
+              <span className="inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-50 text-red-800 border border-red-200">
+                <ArrowUpRight className="w-3 h-3 shrink-0" /> Budget Leak
               </span>
             </div>
             <div className="text-3xl font-bold text-red-700 tracking-tight font-mono">
@@ -135,15 +134,15 @@ export default function OverviewPage() {
           </div>
         </div>
 
-        {/* Card 4: Scope 3 Carbon Abated */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[160px]">
+        {/* Card 4: Scope 3 Carbon */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[160px] overflow-hidden">
           <div>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Scope 3 Carbon Abated
+            <div className="flex items-center justify-between gap-1.5 mb-3">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[105px]">
+                Scope 3 Carbon
               </span>
-              <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                <Leaf className="w-3.5 h-3.5 mr-0.5" /> ESG Metric
+              <span className="inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <Leaf className="w-3 h-3 mr-0.5 shrink-0" /> ESG Metric
               </span>
             </div>
             <div className="text-3xl font-bold text-emerald-700 tracking-tight font-mono">
