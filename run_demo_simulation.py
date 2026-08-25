@@ -92,18 +92,19 @@ def create_chute_canvas_with_image(img_path: Path) -> Tuple[np.ndarray, Tuple[in
 
 
 def main():
-    print("\n" + "=" * 70)
+    print("\n" + "=" * 75)
     print("      SURGIWASTE AI - INTERACTIVE IMAGE INSPECTION DEMO      ")
-    print("=" * 70)
+    print("=" * 75)
     print("  Controls:")
-    print("    [SPACE] or [N] : Next Photo (Triggers 2-Blink AI Lock-On Effect)")
+    print("    [SPACE] or [N] : Next Photo (2-Blink Lock-On Animation)")
     print("    [P]            : Previous Photo")
+    print("    [M]            : Toggle Mode (3-Stream Standard <-> 4-Class Detailed)")
     print("    [1]            : Switch Target Bin to Yellow_Biohazard (Infectious)")
     print("    [2]            : Switch Target Bin to General_Recycle (Clean Packaging)")
     print("    [3]            : Switch Target Bin to Sharps_Container")
     print("    [D]            : Drop Item (Trigger Event & Log to data/events.jsonl)")
     print("    [Q] or [ESC]   : Exit Demo")
-    print("=" * 70 + "\n")
+    print("=" * 75 + "\n")
 
     samples = load_diverse_demo_samples()
     if not samples:
@@ -118,6 +119,7 @@ def main():
     current_idx = 0
     last_event = None
     switch_timestamp = time.time()
+    display_mode = "3_CLASS"  # Default: 3-Stream Standard (General_Waste, Biohazard, Sharps)
 
     # Pre-load initial sample
     cat_gt, folder_name, img_path = samples[current_idx]
@@ -128,11 +130,6 @@ def main():
         elapsed = time.time() - switch_timestamp
 
         # 2-Blink Lock-On Animation:
-        # 0.00s ~ 0.18s: ON
-        # 0.18s ~ 0.32s: OFF (Blink 1)
-        # 0.32s ~ 0.50s: ON
-        # 0.50s ~ 0.64s: OFF (Blink 2)
-        # >= 0.64s: ON (Locked On permanently)
         if elapsed < 0.18:
             show_bbox = True
         elif elapsed < 0.32:
@@ -144,7 +141,7 @@ def main():
         else:
             show_bbox = True
 
-        # Render HUD with dynamic blink
+        # Render HUD with dynamic blink and display mode
         vis = visualizer.draw_hud(
             frame=frame,
             inference=inference,
@@ -153,16 +150,18 @@ def main():
             target_bin=tracker.target_bin,
             show_bbox=show_bbox,
             is_locked_on=(elapsed >= 0.64),
+            display_mode=display_mode,
         )
 
         # Top Bar Info
         cv2.rectangle(vis, (0, 0), (FRAME_WIDTH, 35), (25, 25, 25), -1)
         status_tag = "LOCKED-ON" if elapsed >= 0.64 else "DETECTING..."
-        info_text = f"Sample [{current_idx + 1}/{len(samples)}] | Folder: {folder_name} | GT: {cat_gt} | AI Status: {status_tag}"
+        mode_tag = "3-Stream" if display_mode == "3_CLASS" else "4-Class"
+        info_text = f"[{current_idx + 1}/{len(samples)}] {folder_name} | GT: {cat_gt} | Mode: [{mode_tag}] | AI: {status_tag}"
         cv2.putText(vis, info_text, (15, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1, cv2.LINE_AA)
 
         # Bottom Hint
-        hint_text = "[SPACE] Next | [P] Prev | [D] Drop to Bin & Log | [1,2,3] Bin | [Q] Quit"
+        hint_text = "[SPACE] Next | [P] Prev | [M] Mode Toggle | [D] Drop | [1,2,3] Bin | [Q] Quit"
         cv2.putText(vis, hint_text, (15, FRAME_HEIGHT - 45), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1, cv2.LINE_AA)
 
         cv2.imshow("SurgiWaste AI - Static Image Inspection", vis)
@@ -182,6 +181,10 @@ def main():
             frame, item_bbox = create_chute_canvas_with_image(img_path)
             inference = detector.detect_in_roi(frame, ROI_COORDS, explicit_bbox=item_bbox)
             switch_timestamp = time.time()
+        elif key in [ord("m"), ord("M")]:
+            display_mode = "4_CLASS" if display_mode == "3_CLASS" else "3_CLASS"
+            mode_name = "3-Stream Standard (General_Waste)" if display_mode == "3_CLASS" else "4-Class Detailed (Plastic/Paper separated)"
+            print(f"\n[Classification Mode] Toggled to -> {mode_name}")
         elif key == ord("1"):
             tracker.target_bin = TargetBinType.YELLOW_BIOHAZARD
             print("\n[Target Bin] Switched to -> Yellow_Biohazard (Infectious Bin)")

@@ -37,6 +37,7 @@ class WasteVisualizer:
         target_bin: TargetBinType = TargetBinType.YELLOW_BIOHAZARD,
         show_bbox: bool = True,
         is_locked_on: bool = True,
+        display_mode: str = "3_CLASS", # "3_CLASS" (General_Waste) or "4_CLASS" (Detailed Plastic/Paper)
     ) -> np.ndarray:
         out = frame.copy()
         x1, y1, x2, y2 = self.roi_coords
@@ -54,24 +55,30 @@ class WasteVisualizer:
             cv2.LINE_AA,
         )
 
-        # 2. Enlarged High-Visibility Bounding Box & Category Badge (with 2-Blink Pulse)
+        # 2. Enlarged High-Visibility Bounding Box & Category Badge
         if show_bbox and inference is not None and inference.bbox is not None:
             bx1, by1, bx2, by2 = inference.bbox
             color = COLOR_MAP.get(inference.category, (140, 140, 140))
 
+            # Determine Label by Display Mode (3-Class Standard vs 4-Class Detailed)
+            if display_mode == "3_CLASS" and inference.category in [MaterialCategory.CLEAN_PLASTIC, MaterialCategory.CLEAN_PAPER]:
+                category_title = "General_Waste (Clean Packaging)"
+                color = (240, 180, 0) # Unified General Clean Packaging Color
+            else:
+                category_title = inference.category.value
+
             # Thick high-visibility BBox
             cv2.rectangle(out, (bx1, by1), (bx2, by2), color, 3)
 
-            # High-visibility Badge text (Enlarged for presentation slides)
-            badge_text = f" {inference.category.value} ({inference.confidence*100:.0f}%) "
+            # High-visibility Badge text
+            badge_text = f" {category_title} ({inference.confidence*100:.0f}%) "
             if inference.is_contaminated:
                 badge_text += "[BIO-ALERT] "
 
-            font_scale = 0.65
+            font_scale = 0.62
             thickness = 2
             (tw, th), baseline = cv2.getTextSize(badge_text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
 
-            # Solid prominent badge background
             badge_y1 = max(0, by1 - th - 12)
             badge_y2 = by1
             badge_x2 = min(out.shape[1], bx1 + tw + 10)
@@ -88,7 +95,7 @@ class WasteVisualizer:
                 cv2.LINE_AA,
             )
 
-            # Subtle lock-on target crosshairs at corners
+            # Target crosshairs at corners
             cw = 12
             cv2.line(out, (bx1, by1), (bx1 + cw, by1), (255, 255, 255), 2)
             cv2.line(out, (bx1, by1), (bx1, by1 + cw), (255, 255, 255), 2)
@@ -96,7 +103,7 @@ class WasteVisualizer:
             cv2.line(out, (bx2, by2), (bx2, by2 - cw), (255, 255, 255), 2)
 
         # 3. Top System Stats Overlay
-        cv2.rectangle(out, (10, 10), (220, 60), (20, 20, 20), -1)
+        cv2.rectangle(out, (10, 10), (250, 65), (20, 20, 20), -1)
         cv2.putText(
             out,
             f"FPS: {fps:.1f}",
@@ -107,12 +114,23 @@ class WasteVisualizer:
             1,
             cv2.LINE_AA,
         )
+        mode_label = "3-Stream Standard" if display_mode == "3_CLASS" else "4-Class Detailed"
+        cv2.putText(
+            out,
+            f"Mode: {mode_label}",
+            (18, 46),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.4,
+            (255, 215, 0),
+            1,
+            cv2.LINE_AA,
+        )
         cv2.putText(
             out,
             f"Standard: AS/NZS 3816",
-            (18, 50),
+            (18, 60),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.4,
+            0.38,
             (200, 200, 200),
             1,
             cv2.LINE_AA,
@@ -124,9 +142,13 @@ class WasteVisualizer:
             cv2.rectangle(out, (0, frame.shape[0] - 38), (frame.shape[1], frame.shape[0]), banner_color, -1)
 
             status_str = "MISCLASSIFIED DIVERSION" if last_event.is_misclassified else "CORRECT SEGREGATION"
+            category_str = (
+                "General_Waste" if display_mode == "3_CLASS" and last_event.detected_category.value in ["Clean_Plastic", "Clean_Paper"]
+                else last_event.detected_category.value
+            )
             event_text = (
                 f"[{status_str}] ID: {last_event.event_id} | "
-                f"Category: {last_event.detected_category.value} | "
+                f"Category: {category_str} | "
                 f"Conf: {last_event.confidence*100:.0f}%"
             )
             cv2.putText(
