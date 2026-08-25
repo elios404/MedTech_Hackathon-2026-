@@ -12,13 +12,13 @@ from vision_system.shared.schemas import (
     WasteDropEvent,
 )
 
-# Colors in BGR
+# High-contrast Medical SaaS Palette (BGR)
 COLOR_MAP = {
-    MaterialCategory.CLEAN_PLASTIC: (255, 191, 0),      # Deep Sky Blue
-    MaterialCategory.CLEAN_PAPER: (0, 215, 255),        # Amber Yellow
-    MaterialCategory.BIOHAZARD_INFECTIOUS: (0, 0, 255),  # Crimson Red
-    MaterialCategory.SHARPS_HAZARD: (180, 0, 255),      # Magenta Purple
-    MaterialCategory.UNKNOWN: (128, 128, 128),          # Slate Gray
+    MaterialCategory.CLEAN_PLASTIC: (240, 160, 0),      # Vivid Cyan Blue
+    MaterialCategory.CLEAN_PAPER: (0, 200, 255),        # Bright Amber Yellow
+    MaterialCategory.BIOHAZARD_INFECTIOUS: (30, 30, 240), # Vivid Crimson Red
+    MaterialCategory.SHARPS_HAZARD: (220, 30, 220),     # Neon Purple / Magenta
+    MaterialCategory.UNKNOWN: (140, 140, 140),          # Neutral Slate Gray
 }
 
 
@@ -35,45 +35,65 @@ class WasteVisualizer:
         last_event: Optional[WasteDropEvent],
         fps: float = 0.0,
         target_bin: TargetBinType = TargetBinType.YELLOW_BIOHAZARD,
+        show_bbox: bool = True,
+        is_locked_on: bool = True,
     ) -> np.ndarray:
         out = frame.copy()
         x1, y1, x2, y2 = self.roi_coords
 
-        # 1. ROI Chute Zone (Green boundary)
-        cv2.rectangle(out, (x1, y1), (x2, y2), (0, 255, 128), 2)
+        # 1. ROI Chute Zone (Professional Green boundary)
+        cv2.rectangle(out, (x1, y1), (x2, y2), (0, 230, 120), 2)
         cv2.putText(
             out,
             f"Waste Influx Chute ({target_bin.value})",
-            (x1 + 5, y1 - 8),
+            (x1 + 6, y1 - 10),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.5,
-            (0, 255, 128),
-            1,
+            0.55,
+            (0, 230, 120),
+            2,
             cv2.LINE_AA,
         )
 
-        # 2. Bounding Box & Category Badge
-        if inference is not None and inference.bbox is not None:
+        # 2. Enlarged High-Visibility Bounding Box & Category Badge (with 2-Blink Pulse)
+        if show_bbox and inference is not None and inference.bbox is not None:
             bx1, by1, bx2, by2 = inference.bbox
-            color = COLOR_MAP.get(inference.category, (128, 128, 128))
+            color = COLOR_MAP.get(inference.category, (140, 140, 140))
 
-            cv2.rectangle(out, (bx1, by1), (bx2, by2), color, 2)
-            badge_text = f"{inference.category.value} ({inference.confidence*100:.0f}%)"
+            # Thick high-visibility BBox
+            cv2.rectangle(out, (bx1, by1), (bx2, by2), color, 3)
+
+            # High-visibility Badge text (Enlarged for presentation slides)
+            badge_text = f" {inference.category.value} ({inference.confidence*100:.0f}%) "
             if inference.is_contaminated:
-                badge_text += " [BIO-ALERT]"
+                badge_text += "[BIO-ALERT] "
 
-            (tw, th), _ = cv2.getTextSize(badge_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-            cv2.rectangle(out, (bx1, by1 - 22), (bx1 + tw + 8, by1), color, -1)
+            font_scale = 0.65
+            thickness = 2
+            (tw, th), baseline = cv2.getTextSize(badge_text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+
+            # Solid prominent badge background
+            badge_y1 = max(0, by1 - th - 12)
+            badge_y2 = by1
+            badge_x2 = min(out.shape[1], bx1 + tw + 10)
+
+            cv2.rectangle(out, (bx1, badge_y1), (badge_x2, badge_y2), color, -1)
             cv2.putText(
                 out,
                 badge_text,
-                (bx1 + 4, by1 - 6),
+                (bx1 + 4, badge_y2 - 6),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
+                font_scale,
                 (255, 255, 255),
-                1,
+                thickness,
                 cv2.LINE_AA,
             )
+
+            # Subtle lock-on target crosshairs at corners
+            cw = 12
+            cv2.line(out, (bx1, by1), (bx1 + cw, by1), (255, 255, 255), 2)
+            cv2.line(out, (bx1, by1), (bx1, by1 + cw), (255, 255, 255), 2)
+            cv2.line(out, (bx2, by2), (bx2 - cw, by2), (255, 255, 255), 2)
+            cv2.line(out, (bx2, by2), (bx2, by2 - cw), (255, 255, 255), 2)
 
         # 3. Top System Stats Overlay
         cv2.rectangle(out, (10, 10), (220, 60), (20, 20, 20), -1)

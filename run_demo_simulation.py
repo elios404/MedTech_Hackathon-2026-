@@ -96,10 +96,10 @@ def main():
     print("      SURGIWASTE AI - INTERACTIVE IMAGE INSPECTION DEMO      ")
     print("=" * 70)
     print("  Controls:")
-    print("    [SPACE] or [N] : Next Photo")
+    print("    [SPACE] or [N] : Next Photo (Triggers 2-Blink AI Lock-On Effect)")
     print("    [P]            : Previous Photo")
-    print("    [1]            : Switch Target Bin to Yellow_Biohazard (Cost Leak)")
-    print("    [2]            : Switch Target Bin to General_Recycle")
+    print("    [1]            : Switch Target Bin to Yellow_Biohazard (Infectious)")
+    print("    [2]            : Switch Target Bin to General_Recycle (Clean Packaging)")
     print("    [3]            : Switch Target Bin to Sharps_Container")
     print("    [D]            : Drop Item (Trigger Event & Log to data/events.jsonl)")
     print("    [Q] or [ESC]   : Exit Demo")
@@ -117,26 +117,48 @@ def main():
 
     current_idx = 0
     last_event = None
+    switch_timestamp = time.time()
+
+    # Pre-load initial sample
+    cat_gt, folder_name, img_path = samples[current_idx]
+    frame, item_bbox = create_chute_canvas_with_image(img_path)
+    inference = detector.detect_in_roi(frame, ROI_COORDS, explicit_bbox=item_bbox)
 
     while True:
-        cat_gt, folder_name, img_path = samples[current_idx]
-        frame, item_bbox = create_chute_canvas_with_image(img_path)
+        elapsed = time.time() - switch_timestamp
 
-        # Detect with precise item_bbox placement
-        inference = detector.detect_in_roi(frame, ROI_COORDS, explicit_bbox=item_bbox)
+        # 2-Blink Lock-On Animation:
+        # 0.00s ~ 0.18s: ON
+        # 0.18s ~ 0.32s: OFF (Blink 1)
+        # 0.32s ~ 0.50s: ON
+        # 0.50s ~ 0.64s: OFF (Blink 2)
+        # >= 0.64s: ON (Locked On permanently)
+        if elapsed < 0.18:
+            show_bbox = True
+        elif elapsed < 0.32:
+            show_bbox = False
+        elif elapsed < 0.50:
+            show_bbox = True
+        elif elapsed < 0.64:
+            show_bbox = False
+        else:
+            show_bbox = True
 
-        # Render HUD
+        # Render HUD with dynamic blink
         vis = visualizer.draw_hud(
             frame=frame,
             inference=inference,
             last_event=last_event,
-            fps=0.0,
+            fps=30.0 if elapsed >= 0.64 else 60.0,
             target_bin=tracker.target_bin,
+            show_bbox=show_bbox,
+            is_locked_on=(elapsed >= 0.64),
         )
 
         # Top Bar Info
         cv2.rectangle(vis, (0, 0), (FRAME_WIDTH, 35), (25, 25, 25), -1)
-        info_text = f"Sample [{current_idx + 1}/{len(samples)}] | Folder: {folder_name} | GT: {cat_gt}"
+        status_tag = "LOCKED-ON" if elapsed >= 0.64 else "DETECTING..."
+        info_text = f"Sample [{current_idx + 1}/{len(samples)}] | Folder: {folder_name} | GT: {cat_gt} | AI Status: {status_tag}"
         cv2.putText(vis, info_text, (15, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1, cv2.LINE_AA)
 
         # Bottom Hint
@@ -144,14 +166,22 @@ def main():
         cv2.putText(vis, hint_text, (15, FRAME_HEIGHT - 45), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1, cv2.LINE_AA)
 
         cv2.imshow("SurgiWaste AI - Static Image Inspection", vis)
-        key = cv2.waitKey(0) & 0xFF
+        key = cv2.waitKey(25) & 0xFF
 
         if key in [ord("q"), 27]:
             break
         elif key in [ord(" "), ord("n"), 83]:
             current_idx = (current_idx + 1) % len(samples)
+            cat_gt, folder_name, img_path = samples[current_idx]
+            frame, item_bbox = create_chute_canvas_with_image(img_path)
+            inference = detector.detect_in_roi(frame, ROI_COORDS, explicit_bbox=item_bbox)
+            switch_timestamp = time.time()
         elif key in [ord("p"), 81]:
             current_idx = (current_idx - 1 + len(samples)) % len(samples)
+            cat_gt, folder_name, img_path = samples[current_idx]
+            frame, item_bbox = create_chute_canvas_with_image(img_path)
+            inference = detector.detect_in_roi(frame, ROI_COORDS, explicit_bbox=item_bbox)
+            switch_timestamp = time.time()
         elif key == ord("1"):
             tracker.target_bin = TargetBinType.YELLOW_BIOHAZARD
             print("\n[Target Bin] Switched to -> Yellow_Biohazard (Infectious Bin)")
