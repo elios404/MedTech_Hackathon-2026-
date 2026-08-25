@@ -37,6 +37,24 @@ class WasteDetector:
         self.model = YOLO(str(target_model))
         self.is_classifier = hasattr(self.model, "names") and not hasattr(self.model, "set_classes")
 
+    def _is_empty_or_blank(self, roi_crop: np.ndarray) -> bool:
+        """Determines if the ROI contains no physical object (e.g. solid white/black/empty chute)."""
+        if roi_crop.size == 0:
+            return True
+
+        gray = cv2.cvtColor(roi_crop, cv2.COLOR_BGR2GRAY)
+        std_dev = float(np.std(gray))
+
+        # Check edge density via Canny
+        edges = cv2.Canny(gray, 40, 120)
+        edge_count = cv2.countNonZero(edges)
+
+        # If variance is very low (< 14.0) or edge count is negligible, it's a blank background
+        if std_dev < 14.0 or edge_count < 120:
+            return True
+
+        return False
+
     def _check_red_contamination(self, roi_crop: np.ndarray) -> Tuple[bool, float]:
         """Calculates ratio of red pixels (indicating blood/biohazard) in HSV color space."""
         if roi_crop.size == 0:
@@ -66,10 +84,14 @@ class WasteDetector:
         if roi_crop.size == 0:
             return None
 
-        # 1. Color Contamination Check (Blood / Infectious)
+        # 1. Blank / Empty Chute Saliency Check (Prevents false mapping on empty/white frames)
+        if self._is_empty_or_blank(roi_crop):
+            return None
+
+        # 2. Color Contamination Check (Blood / Infectious)
         is_red, red_ratio = self._check_red_contamination(roi_crop)
 
-        # 2. Custom Fine-tuned Classifier Model
+        # 3. Custom Fine-tuned Classifier Model
         if self.is_classifier:
             results = self.model(roi_crop, verbose=False)
             if not results or results[0].probs is None:
@@ -79,14 +101,15 @@ class WasteDetector:
             top1_conf = float(results[0].probs.top1conf.cpu().numpy())
             class_name = results[0].names[top1_idx]
 
-            # Bounding Box: If explicit_bbox provided (e.g. from simulator), use it.
-            # Otherwise, use balanced saliency bounding.
+            # Reject low-confidence ambiguous inferences (< 55%)
+            if top1_conf < 0.55:
+                return None
+
+            # Bounding Box
             if explicit_bbox is not None:
                 bbox = list(explicit_bbox)
             else:
-                # Find foreground object contour inside ROI
                 gray = cv2.cvtColor(roi_crop, cv2.COLOR_BGR2GRAY)
-                # Compute difference from background
                 bg_val = np.median(gray)
                 diff = cv2.absdiff(gray, int(bg_val))
                 _, thresh = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
@@ -131,7 +154,7 @@ class WasteDetector:
                 label=class_name,
             )
 
-        # 3. Fallback: YOLO-World Object Detection
+        # 4. Fallback: YOLO-World Object Detection
         results = self.model(roi_crop, conf=self.conf_thresh, verbose=False)
         if not results or len(results[0].boxes) == 0:
             return None
