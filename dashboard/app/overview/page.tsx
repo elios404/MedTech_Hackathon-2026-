@@ -29,10 +29,13 @@ export default function OverviewPage() {
   const [selectedPeriodKey, setSelectedPeriodKey] = useState("August 2026 (Live MTD)");
   const [showAllDeptsModal, setShowAllDeptsModal] = useState(false);
 
-  // Staggered live increments (Total Waste first, then Cost Loss 2 seconds later)
+  // Staggered live increments (Waste, Biohazard Ratio, and Cost Loss)
   const [liveWasteDeltaKg, setLiveWasteDeltaKg] = useState(0);
   const [liveCostDeltaAUD, setLiveCostDeltaAUD] = useState(0);
+  const [liveBioRatioDelta, setLiveBioRatioDelta] = useState(0);
+
   const [isWastePulsing, setIsWastePulsing] = useState(false);
+  const [isBioPulsing, setIsBioPulsing] = useState(false);
   const [isCostPulsing, setIsCostPulsing] = useState(false);
 
   useEffect(() => {
@@ -41,30 +44,44 @@ export default function OverviewPage() {
         setSelectedPeriodKey(e.detail);
         setLiveWasteDeltaKg(0);
         setLiveCostDeltaAUD(0);
+        setLiveBioRatioDelta(0);
       }
     };
     window.addEventListener("surgiwaste:periodChange", handlePeriodChange);
     return () => window.removeEventListener("surgiwaste:periodChange", handlePeriodChange);
   }, []);
 
-  // Staggered 8-second live cycle: Waste increases at T+0s, Cost increases at T+2.2s
+  // Dynamic 4.8s live cycle: 2 full cycles occurring within a 10s GIF recording window
   useEffect(() => {
+    let tickCount = 0;
+
     const interval = setInterval(() => {
-      // Step 1 (T+0s): Total Waste ticks up smoothly
+      tickCount += 1;
+
+      // 1. Total Waste rolls at T+0s (Every 4.8s)
       const randomKg = Math.round(2 + Math.random() * 2);
       setLiveWasteDeltaKg((prev) => prev + randomKg);
       setIsWastePulsing(true);
-      setTimeout(() => setIsWastePulsing(false), 1200);
+      setTimeout(() => setIsWastePulsing(false), 900);
 
-      // Step 2 (T+2.2s): Cost Leak Loss ticks up smoothly 2.2 seconds later
+      // 2. Biohazard Ratio rolls once every 2 ticks (around T+1.5s in 10s window)
+      if (tickCount % 2 === 1) {
+        setTimeout(() => {
+          setLiveBioRatioDelta((prev) => (prev === 0 ? 0.3 : 0.0));
+          setIsBioPulsing(true);
+          setTimeout(() => setIsBioPulsing(false), 900);
+        }, 1400);
+      }
+
+      // 3. Cost Leak Loss rolls at T+2.2s
       setTimeout(() => {
         const randomCost = Math.floor(6 + Math.random() * 6);
         setLiveCostDeltaAUD((prev) => prev + randomCost);
         setIsCostPulsing(true);
-        setTimeout(() => setIsCostPulsing(false), 1200);
+        setTimeout(() => setIsCostPulsing(false), 900);
       }, 2200);
 
-    }, 8500);
+    }, 4800);
 
     return () => clearInterval(interval);
   }, []);
@@ -74,6 +91,7 @@ export default function OverviewPage() {
 
   const targetTotalWasteKg = currentStats.totalWasteWeightKg + liveWasteDeltaKg;
   const targetCostLossAUD = currentStats.misclassificationCostLossAUD + liveCostDeltaAUD;
+  const targetBiohazardRatio = Number((currentStats.yellowBiohazardRatioPercent + liveBioRatioDelta).toFixed(1));
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-8">
@@ -104,11 +122,11 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {/* 2. Top-Tier KPI Cards (Scoreboard Smooth Count-up & 2s Staggered Interval) */}
+      {/* 2. Top-Tier KPI Cards (Dynamic 2-Wave Live Count-up for 10s GIF Recording) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Card 1: Total Waste (Rolls smoothly at T+0s) */}
-        <div className={`bg-white p-6 rounded-xl border shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all duration-500 ${
-          isWastePulsing ? "border-emerald-300 ring-2 ring-emerald-500/10" : "border-slate-200"
+        {/* Card 1: Total Waste (Rolls 2 times in 10s) */}
+        <div className={`bg-white p-6 rounded-xl border shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all duration-300 ${
+          isWastePulsing ? "border-emerald-400 ring-2 ring-emerald-500/20" : "border-slate-200"
         }`}>
           <div>
             <div className="flex items-center justify-between gap-1.5 mb-3">
@@ -122,7 +140,7 @@ export default function OverviewPage() {
             <div className="text-4xl sm:text-4xl lg:text-[2.65rem] font-bold text-slate-900 tracking-tight font-mono flex items-baseline gap-1.5">
               <AnimatedCounter 
                 value={targetTotalWasteKg}
-                duration={1000}
+                duration={700}
                 formatter={(v) => formatNumber(v)}
                 className={isWastePulsing ? "text-emerald-700 transition-colors" : "transition-colors"}
               />
@@ -135,23 +153,27 @@ export default function OverviewPage() {
           </div>
         </div>
 
-        {/* Card 2: Biohazard Ratio */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all">
+        {/* Card 2: Biohazard Ratio (Gently shifts once during 10s) */}
+        <div className={`bg-white p-6 rounded-xl border shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all duration-300 ${
+          isBioPulsing ? "border-amber-400 ring-2 ring-amber-500/20" : "border-slate-200"
+        }`}>
           <div>
             <div className="flex items-center justify-between gap-1.5 mb-3">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[120px]">
                 Biohazard Ratio
               </span>
               <span className="inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                +{(currentStats.yellowBiohazardRatioPercent - currentStats.yellowTargetRatioPercent).toFixed(1)}% vs Cap
+                +{(targetBiohazardRatio - currentStats.yellowTargetRatioPercent).toFixed(1)}% vs Cap
               </span>
             </div>
             <div className="text-4xl sm:text-4xl lg:text-[2.65rem] font-bold text-amber-700 tracking-tight font-mono flex items-baseline gap-2">
-              {currentStats.yellowBiohazardRatioPercent}%
+              <span className={isBioPulsing ? "text-amber-800 transition-colors" : "transition-colors"}>
+                {targetBiohazardRatio}%
+              </span>
               <span className="text-xs font-normal text-slate-500 font-sans">Target: 25.0%</span>
             </div>
             <div className="mt-3.5 w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-              <div className="bg-amber-500 h-full rounded-full" style={{ width: `${currentStats.yellowBiohazardRatioPercent}%` }} />
+              <div className="bg-amber-500 h-full rounded-full transition-all duration-500" style={{ width: `${targetBiohazardRatio}%` }} />
             </div>
           </div>
           <div className="mt-4 pt-3.5 border-t border-slate-100 text-xs text-slate-500 leading-normal">
@@ -159,9 +181,9 @@ export default function OverviewPage() {
           </div>
         </div>
 
-        {/* Card 3: Cost Loss (Rolls smoothly at T+2.2s) */}
-        <div className={`bg-white p-6 rounded-xl border shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all duration-500 ${
-          isCostPulsing ? "border-red-300 ring-2 ring-red-500/10" : "border-slate-200"
+        {/* Card 3: Cost Loss (Rolls 2 times in 10s) */}
+        <div className={`bg-white p-6 rounded-xl border shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all duration-300 ${
+          isCostPulsing ? "border-red-400 ring-2 ring-red-500/20" : "border-slate-200"
         }`}>
           <div>
             <div className="flex items-center justify-between gap-1.5 mb-3">
@@ -175,7 +197,7 @@ export default function OverviewPage() {
             <div className="text-4xl sm:text-4xl lg:text-[2.65rem] font-bold text-red-700 tracking-tight font-mono">
               <AnimatedCounter 
                 value={targetCostLossAUD}
-                duration={1000}
+                duration={700}
                 formatter={(v) => formatCurrencyAUD(v)}
                 className={isCostPulsing ? "text-red-800 transition-colors" : "transition-colors"}
               />
@@ -286,7 +308,7 @@ export default function OverviewPage() {
                   </div>
                   <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                     <div 
-                      className={`h-full rounded-full ${item.bioRatio > 45 ? "bg-red-500" : "bg-amber-500"}`}
+                      className={`h-full rounded-full ${item.bioRatio > 45 ? "bg-red-500" : item.bioRatio > 25 ? "bg-amber-500" : "bg-emerald-500"}`}
                       style={{ width: `${item.bioRatio}%` }}
                     />
                   </div>
