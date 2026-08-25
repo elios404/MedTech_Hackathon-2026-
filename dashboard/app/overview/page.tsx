@@ -7,7 +7,8 @@ import {
   ArrowUpRight, 
   Sparkles, 
   ArrowRight, 
-  X 
+  X,
+  Radio
 } from "lucide-react";
 import { 
   ResponsiveContainer, 
@@ -28,18 +29,47 @@ export default function OverviewPage() {
   const [selectedPeriodKey, setSelectedPeriodKey] = useState("August 2026 (Live MTD)");
   const [showAllDeptsModal, setShowAllDeptsModal] = useState(false);
 
+  // Real-time gentle live increment state (for 7-10s GIF demonstration)
+  const [liveWasteDeltaKg, setLiveWasteDeltaKg] = useState(0);
+  const [liveCostDeltaAUD, setLiveCostDeltaAUD] = useState(0);
+  const [isLivePulsing, setIsLivePulsing] = useState(false);
+
   useEffect(() => {
     const handlePeriodChange = (e: any) => {
       if (e.detail) {
         setSelectedPeriodKey(e.detail);
+        // Reset live deltas on period change
+        setLiveWasteDeltaKg(0);
+        setLiveCostDeltaAUD(0);
       }
     };
     window.addEventListener("surgiwaste:periodChange", handlePeriodChange);
     return () => window.removeEventListener("surgiwaste:periodChange", handlePeriodChange);
   }, []);
 
+  // 7.5-second gentle live simulation interval for GIF recordings
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Gentle realistic increments: +2.1 ~ +3.4 kg & +$7 ~ +$11 AUD
+      const randomKg = Number((2.0 + Math.random() * 1.5).toFixed(1));
+      const randomCost = Math.floor(6 + Math.random() * 6);
+
+      setLiveWasteDeltaKg((prev) => Number((prev + randomKg).toFixed(1)));
+      setLiveCostDeltaAUD((prev) => prev + randomCost);
+
+      setIsLivePulsing(true);
+      const timer = setTimeout(() => setIsLivePulsing(false), 1200);
+      return () => clearTimeout(timer);
+    }, 7500);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const currentStats = getPeriodData(selectedPeriodKey);
   const top3Depts = currentStats.departmentRatio.slice(0, 3);
+
+  const displayTotalWasteKg = currentStats.totalWasteWeightKg + Math.round(liveWasteDeltaKg);
+  const displayCostLossAUD = currentStats.misclassificationCostLossAUD + liveCostDeltaAUD;
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-8">
@@ -59,97 +89,106 @@ export default function OverviewPage() {
           </p>
         </div>
 
-        {/* Active Scope Badge */}
-        <div className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-100 border border-slate-200 text-xs text-slate-700 font-medium self-start md:self-auto">
+        {/* Active Scope Badge with Live Feed Pulse Indicator */}
+        <div className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-100 border border-slate-200 text-xs text-slate-700 font-medium self-start md:self-auto shadow-sm">
+          <span className="flex h-2 w-2 relative">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
           <span className="text-slate-500 font-normal">Active Scope:</span>
           <span className="font-bold text-slate-900 font-mono">{currentStats.reportingPeriod}</span>
         </div>
       </div>
 
-      {/* 2. Top-Tier KPI Cards (Precision Edge Padding - No Pill Overflow) */}
+      {/* 2. Top-Tier KPI Cards (Enlarged High-Visibility Typography & Live Simulation) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Card 1: Total Waste */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[160px] overflow-hidden">
+        {/* Card 1: Total Waste (Gently increases in 7.5s interval) */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all">
           <div>
             <div className="flex items-center justify-between gap-1.5 mb-3">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[105px]">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[120px]">
                 Total Waste
               </span>
-              <span className="inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                <ArrowDownRight className="w-3 h-3 shrink-0" /> -8.4% YoY
+              <span className="inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <ArrowDownRight className="w-3.5 h-3.5 shrink-0" /> -8.4% YoY
               </span>
             </div>
-            <div className="text-3xl font-bold text-slate-900 tracking-tight font-mono">
-              {formatNumber(currentStats.totalWasteWeightKg)} <span className="text-base font-normal text-slate-500">kg</span>
+            <div className="text-4xl sm:text-4xl lg:text-[2.65rem] font-bold text-slate-900 tracking-tight font-mono flex items-baseline gap-1.5 transition-all">
+              <span className={isLivePulsing ? "text-emerald-700 transition-colors" : "transition-colors"}>
+                {formatNumber(displayTotalWasteKg)}
+              </span>
+              <span className="text-lg font-normal text-slate-500 font-sans">kg</span>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 leading-normal">
+          <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 leading-normal">
             <span>Period: {currentStats.reportingPeriod}</span>
             <span className="font-semibold text-slate-700">12 OTs Audited</span>
           </div>
         </div>
 
         {/* Card 2: Biohazard Ratio */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[160px] overflow-hidden">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all">
           <div>
             <div className="flex items-center justify-between gap-1.5 mb-3">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[105px]">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[120px]">
                 Biohazard Ratio
               </span>
-              <span className="inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
+              <span className="inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
                 +{(currentStats.yellowBiohazardRatioPercent - currentStats.yellowTargetRatioPercent).toFixed(1)}% vs Cap
               </span>
             </div>
-            <div className="text-3xl font-bold text-amber-700 tracking-tight font-mono flex items-baseline gap-2">
+            <div className="text-4xl sm:text-4xl lg:text-[2.65rem] font-bold text-amber-700 tracking-tight font-mono flex items-baseline gap-2">
               {currentStats.yellowBiohazardRatioPercent}%
               <span className="text-xs font-normal text-slate-500 font-sans">Target: 25.0%</span>
             </div>
-            <div className="mt-3 w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+            <div className="mt-3.5 w-full bg-slate-100 rounded-full h-2 overflow-hidden">
               <div className="bg-amber-500 h-full rounded-full" style={{ width: `${currentStats.yellowBiohazardRatioPercent}%` }} />
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 leading-normal">
+          <div className="mt-4 pt-3.5 border-t border-slate-100 text-xs text-slate-500 leading-normal">
             <span>Clinical Target: &lt; 25.0% yellow bin ratio</span>
           </div>
         </div>
 
-        {/* Card 3: Cost Loss */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[160px] overflow-hidden">
+        {/* Card 3: Cost Loss (Gently increases in 7.5s interval) */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all">
           <div>
             <div className="flex items-center justify-between gap-1.5 mb-3">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[105px]">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[120px]">
                 Cost Leak Loss
               </span>
-              <span className="inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-50 text-red-800 border border-red-200">
-                <ArrowUpRight className="w-3 h-3 shrink-0" /> Budget Leak
+              <span className="inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-50 text-red-800 border border-red-200">
+                <ArrowUpRight className="w-3.5 h-3.5 shrink-0" /> Budget Leak
               </span>
             </div>
-            <div className="text-3xl font-bold text-red-700 tracking-tight font-mono">
-              {formatCurrencyAUD(currentStats.misclassificationCostLossAUD)}
+            <div className="text-4xl sm:text-4xl lg:text-[2.65rem] font-bold text-red-700 tracking-tight font-mono transition-all">
+              <span className={isLivePulsing ? "text-red-800 transition-colors" : "transition-colors"}>
+                {formatCurrencyAUD(displayCostLossAUD)}
+              </span>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 leading-normal">
+          <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 leading-normal">
             <span>Incineration Diff:</span>
             <span className="font-mono font-bold text-slate-800">$3.50 vs $0.35/kg</span>
           </div>
         </div>
 
         {/* Card 4: Scope 3 Carbon */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[160px] overflow-hidden">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all">
           <div>
             <div className="flex items-center justify-between gap-1.5 mb-3">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[105px]">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[120px]">
                 Scope 3 Carbon
               </span>
-              <span className="inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                <Leaf className="w-3 h-3 mr-0.5 shrink-0" /> ESG Metric
+              <span className="inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <Leaf className="w-3.5 h-3.5 mr-0.5 shrink-0" /> ESG Metric
               </span>
             </div>
-            <div className="text-3xl font-bold text-emerald-700 tracking-tight font-mono">
-              {currentStats.scope3CarbonSavedTonnes} <span className="text-base font-normal text-slate-500">tCO₂-e</span>
+            <div className="text-4xl sm:text-4xl lg:text-[2.65rem] font-bold text-emerald-700 tracking-tight font-mono flex items-baseline gap-1.5">
+              {currentStats.scope3CarbonSavedTonnes} <span className="text-lg font-normal text-slate-500 font-sans">tCO₂-e</span>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 leading-normal">
+          <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 leading-normal">
             <span>Protocol:</span>
             <span className="font-semibold text-slate-800">Clean Packaging Diversion</span>
           </div>
