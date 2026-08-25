@@ -7,8 +7,7 @@ import {
   ArrowUpRight, 
   Sparkles, 
   ArrowRight, 
-  X,
-  Radio
+  X
 } from "lucide-react";
 import { 
   ResponsiveContainer, 
@@ -24,21 +23,22 @@ import {
   getPeriodData 
 } from "@/lib/mock-data";
 import { formatCurrencyAUD, formatNumber } from "@/lib/utils";
+import { AnimatedCounter } from "@/components/ui/animated-counter";
 
 export default function OverviewPage() {
   const [selectedPeriodKey, setSelectedPeriodKey] = useState("August 2026 (Live MTD)");
   const [showAllDeptsModal, setShowAllDeptsModal] = useState(false);
 
-  // Real-time gentle live increment state (for 7-10s GIF demonstration)
+  // Staggered live increments (Total Waste first, then Cost Loss 2 seconds later)
   const [liveWasteDeltaKg, setLiveWasteDeltaKg] = useState(0);
   const [liveCostDeltaAUD, setLiveCostDeltaAUD] = useState(0);
-  const [isLivePulsing, setIsLivePulsing] = useState(false);
+  const [isWastePulsing, setIsWastePulsing] = useState(false);
+  const [isCostPulsing, setIsCostPulsing] = useState(false);
 
   useEffect(() => {
     const handlePeriodChange = (e: any) => {
       if (e.detail) {
         setSelectedPeriodKey(e.detail);
-        // Reset live deltas on period change
         setLiveWasteDeltaKg(0);
         setLiveCostDeltaAUD(0);
       }
@@ -47,20 +47,24 @@ export default function OverviewPage() {
     return () => window.removeEventListener("surgiwaste:periodChange", handlePeriodChange);
   }, []);
 
-  // 7.5-second gentle live simulation interval for GIF recordings
+  // Staggered 8-second live cycle: Waste increases at T+0s, Cost increases at T+2.2s
   useEffect(() => {
     const interval = setInterval(() => {
-      // Gentle realistic increments: +2.1 ~ +3.4 kg & +$7 ~ +$11 AUD
-      const randomKg = Number((2.0 + Math.random() * 1.5).toFixed(1));
-      const randomCost = Math.floor(6 + Math.random() * 6);
+      // Step 1 (T+0s): Total Waste ticks up smoothly
+      const randomKg = Math.round(2 + Math.random() * 2);
+      setLiveWasteDeltaKg((prev) => prev + randomKg);
+      setIsWastePulsing(true);
+      setTimeout(() => setIsWastePulsing(false), 1200);
 
-      setLiveWasteDeltaKg((prev) => Number((prev + randomKg).toFixed(1)));
-      setLiveCostDeltaAUD((prev) => prev + randomCost);
+      // Step 2 (T+2.2s): Cost Leak Loss ticks up smoothly 2.2 seconds later
+      setTimeout(() => {
+        const randomCost = Math.floor(6 + Math.random() * 6);
+        setLiveCostDeltaAUD((prev) => prev + randomCost);
+        setIsCostPulsing(true);
+        setTimeout(() => setIsCostPulsing(false), 1200);
+      }, 2200);
 
-      setIsLivePulsing(true);
-      const timer = setTimeout(() => setIsLivePulsing(false), 1200);
-      return () => clearTimeout(timer);
-    }, 7500);
+    }, 8500);
 
     return () => clearInterval(interval);
   }, []);
@@ -68,8 +72,8 @@ export default function OverviewPage() {
   const currentStats = getPeriodData(selectedPeriodKey);
   const top3Depts = currentStats.departmentRatio.slice(0, 3);
 
-  const displayTotalWasteKg = currentStats.totalWasteWeightKg + Math.round(liveWasteDeltaKg);
-  const displayCostLossAUD = currentStats.misclassificationCostLossAUD + liveCostDeltaAUD;
+  const targetTotalWasteKg = currentStats.totalWasteWeightKg + liveWasteDeltaKg;
+  const targetCostLossAUD = currentStats.misclassificationCostLossAUD + liveCostDeltaAUD;
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-8">
@@ -100,10 +104,12 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {/* 2. Top-Tier KPI Cards (Enlarged High-Visibility Typography & Live Simulation) */}
+      {/* 2. Top-Tier KPI Cards (Scoreboard Smooth Count-up & 2s Staggered Interval) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Card 1: Total Waste (Gently increases in 7.5s interval) */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all">
+        {/* Card 1: Total Waste (Rolls smoothly at T+0s) */}
+        <div className={`bg-white p-6 rounded-xl border shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all duration-500 ${
+          isWastePulsing ? "border-emerald-300 ring-2 ring-emerald-500/10" : "border-slate-200"
+        }`}>
           <div>
             <div className="flex items-center justify-between gap-1.5 mb-3">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[120px]">
@@ -113,10 +119,13 @@ export default function OverviewPage() {
                 <ArrowDownRight className="w-3.5 h-3.5 shrink-0" /> -8.4% YoY
               </span>
             </div>
-            <div className="text-4xl sm:text-4xl lg:text-[2.65rem] font-bold text-slate-900 tracking-tight font-mono flex items-baseline gap-1.5 transition-all">
-              <span className={isLivePulsing ? "text-emerald-700 transition-colors" : "transition-colors"}>
-                {formatNumber(displayTotalWasteKg)}
-              </span>
+            <div className="text-4xl sm:text-4xl lg:text-[2.65rem] font-bold text-slate-900 tracking-tight font-mono flex items-baseline gap-1.5">
+              <AnimatedCounter 
+                value={targetTotalWasteKg}
+                duration={1000}
+                formatter={(v) => formatNumber(v)}
+                className={isWastePulsing ? "text-emerald-700 transition-colors" : "transition-colors"}
+              />
               <span className="text-lg font-normal text-slate-500 font-sans">kg</span>
             </div>
           </div>
@@ -150,8 +159,10 @@ export default function OverviewPage() {
           </div>
         </div>
 
-        {/* Card 3: Cost Loss (Gently increases in 7.5s interval) */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all">
+        {/* Card 3: Cost Loss (Rolls smoothly at T+2.2s) */}
+        <div className={`bg-white p-6 rounded-xl border shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all duration-500 ${
+          isCostPulsing ? "border-red-300 ring-2 ring-red-500/10" : "border-slate-200"
+        }`}>
           <div>
             <div className="flex items-center justify-between gap-1.5 mb-3">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[120px]">
@@ -161,10 +172,13 @@ export default function OverviewPage() {
                 <ArrowUpRight className="w-3.5 h-3.5 shrink-0" /> Budget Leak
               </span>
             </div>
-            <div className="text-4xl sm:text-4xl lg:text-[2.65rem] font-bold text-red-700 tracking-tight font-mono transition-all">
-              <span className={isLivePulsing ? "text-red-800 transition-colors" : "transition-colors"}>
-                {formatCurrencyAUD(displayCostLossAUD)}
-              </span>
+            <div className="text-4xl sm:text-4xl lg:text-[2.65rem] font-bold text-red-700 tracking-tight font-mono">
+              <AnimatedCounter 
+                value={targetCostLossAUD}
+                duration={1000}
+                formatter={(v) => formatCurrencyAUD(v)}
+                className={isCostPulsing ? "text-red-800 transition-colors" : "transition-colors"}
+              />
             </div>
           </div>
           <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 leading-normal">
