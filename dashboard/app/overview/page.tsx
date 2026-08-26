@@ -2,14 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { 
-  DollarSign, 
-  TrendingDown, 
   Leaf, 
-  AlertTriangle, 
   ArrowDownRight, 
-  ArrowUpRight,
-  Sparkles,
-  ArrowRight,
+  ArrowUpRight, 
+  Sparkles, 
+  ArrowRight, 
   X
 } from "lucide-react";
 import { 
@@ -26,28 +23,79 @@ import {
   getPeriodData 
 } from "@/lib/mock-data";
 import { formatCurrencyAUD, formatNumber } from "@/lib/utils";
+import { AnimatedCounter } from "@/components/ui/animated-counter";
 
 export default function OverviewPage() {
   const [selectedPeriodKey, setSelectedPeriodKey] = useState("August 2026 (Live MTD)");
   const [showAllDeptsModal, setShowAllDeptsModal] = useState(false);
 
-  // Sync with global header period selector
+  // Staggered live increments (Waste, Biohazard Ratio, and Cost Loss)
+  const [liveWasteDeltaKg, setLiveWasteDeltaKg] = useState(0);
+  const [liveCostDeltaAUD, setLiveCostDeltaAUD] = useState(0);
+  const [liveBioRatioDelta, setLiveBioRatioDelta] = useState(0);
+
+  const [isWastePulsing, setIsWastePulsing] = useState(false);
+  const [isBioPulsing, setIsBioPulsing] = useState(false);
+  const [isCostPulsing, setIsCostPulsing] = useState(false);
+
   useEffect(() => {
     const handlePeriodChange = (e: any) => {
       if (e.detail) {
         setSelectedPeriodKey(e.detail);
+        setLiveWasteDeltaKg(0);
+        setLiveCostDeltaAUD(0);
+        setLiveBioRatioDelta(0);
       }
     };
     window.addEventListener("surgiwaste:periodChange", handlePeriodChange);
     return () => window.removeEventListener("surgiwaste:periodChange", handlePeriodChange);
   }, []);
 
+  // Dynamic 4.8s live cycle: 2 full cycles occurring within a 10s GIF recording window
+  useEffect(() => {
+    let tickCount = 0;
+
+    const interval = setInterval(() => {
+      tickCount += 1;
+
+      // 1. Total Waste rolls at T+0s (Every 4.8s)
+      const randomKg = Math.round(2 + Math.random() * 2);
+      setLiveWasteDeltaKg((prev) => prev + randomKg);
+      setIsWastePulsing(true);
+      setTimeout(() => setIsWastePulsing(false), 900);
+
+      // 2. Biohazard Ratio rolls once every 2 ticks (around T+1.5s in 10s window)
+      if (tickCount % 2 === 1) {
+        setTimeout(() => {
+          setLiveBioRatioDelta((prev) => (prev === 0 ? 0.3 : 0.0));
+          setIsBioPulsing(true);
+          setTimeout(() => setIsBioPulsing(false), 900);
+        }, 1400);
+      }
+
+      // 3. Cost Leak Loss rolls at T+2.2s
+      setTimeout(() => {
+        const randomCost = Math.floor(6 + Math.random() * 6);
+        setLiveCostDeltaAUD((prev) => prev + randomCost);
+        setIsCostPulsing(true);
+        setTimeout(() => setIsCostPulsing(false), 900);
+      }, 2200);
+
+    }, 4800);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const currentStats = getPeriodData(selectedPeriodKey);
   const top3Depts = currentStats.departmentRatio.slice(0, 3);
 
+  const targetTotalWasteKg = currentStats.totalWasteWeightKg + liveWasteDeltaKg;
+  const targetCostLossAUD = currentStats.misclassificationCostLossAUD + liveCostDeltaAUD;
+  const targetBiohazardRatio = Number((currentStats.yellowBiohazardRatioPercent + liveBioRatioDelta).toFixed(1));
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-8">
-      {/* 1. Clean Page Title (Redundant Period Selector Removed) */}
+      {/* 1. Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
         <div>
           <div className="text-xs text-slate-500 font-mono flex items-center gap-1.5 mb-1.5">
@@ -63,104 +111,127 @@ export default function OverviewPage() {
           </p>
         </div>
 
-        {/* Active Reporting Scope Pill */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-xs text-slate-700 font-medium self-start md:self-auto">
-          <span className="text-slate-400 font-normal">Active Scope:</span>
+        {/* Active Scope Badge with Live Feed Pulse Indicator */}
+        <div className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-100 border border-slate-200 text-xs text-slate-700 font-medium self-start md:self-auto shadow-sm">
+          <span className="flex h-2 w-2 relative">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span className="text-slate-500 font-normal">Active Scope:</span>
           <span className="font-bold text-slate-900 font-mono">{currentStats.reportingPeriod}</span>
         </div>
       </div>
 
-      {/* 2. Top-Tier KPI Cards (Precision Alignment & No Text Collisions) */}
+      {/* 2. Top-Tier KPI Cards (Dynamic 2-Wave Live Count-up for 10s GIF Recording) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Card 1: Total Waste */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[145px]">
+        {/* Card 1: Total Waste (Rolls 2 times in 10s) */}
+        <div className={`bg-white p-6 rounded-xl border shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all duration-300 ${
+          isWastePulsing ? "border-emerald-400 ring-2 ring-emerald-500/20" : "border-slate-200"
+        }`}>
           <div>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
-                Total Waste Generated
+            <div className="flex items-center justify-between gap-1.5 mb-3">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[120px]">
+                Total Waste
               </span>
-              <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                <ArrowDownRight className="w-3.5 h-3.5" /> -8.4% YoY
+              <span className="inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <ArrowDownRight className="w-3.5 h-3.5 shrink-0" /> -8.4% YoY
               </span>
             </div>
-            <div className="text-3xl font-bold text-slate-900 tracking-tight font-mono">
-              {formatNumber(currentStats.totalWasteWeightKg)} <span className="text-base font-normal text-slate-500">kg</span>
+            <div className="text-4xl sm:text-4xl lg:text-[2.65rem] font-bold text-slate-900 tracking-tight font-mono flex items-baseline gap-1.5">
+              <AnimatedCounter 
+                value={targetTotalWasteKg}
+                duration={700}
+                formatter={(v) => formatNumber(v)}
+                className={isWastePulsing ? "text-emerald-700 transition-colors" : "transition-colors"}
+              />
+              <span className="text-lg font-normal text-slate-500 font-sans">kg</span>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span className="truncate">Period: {currentStats.reportingPeriod}</span>
-            <span className="font-semibold text-slate-700 shrink-0 ml-1">12 OTs Audited</span>
+          <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 leading-normal">
+            <span>Period: {currentStats.reportingPeriod}</span>
+            <span className="font-semibold text-slate-700">12 OTs Audited</span>
           </div>
         </div>
 
-        {/* Card 2: Biohazard Ratio */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[145px]">
+        {/* Card 2: Biohazard Ratio (Gently shifts once during 10s) */}
+        <div className={`bg-white p-6 rounded-xl border shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all duration-300 ${
+          isBioPulsing ? "border-amber-400 ring-2 ring-amber-500/20" : "border-slate-200"
+        }`}>
           <div>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
+            <div className="flex items-center justify-between gap-1.5 mb-3">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[120px]">
                 Biohazard Ratio
               </span>
-              <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                +{(currentStats.yellowBiohazardRatioPercent - currentStats.yellowTargetRatioPercent).toFixed(1)}% vs Cap
+              <span className="inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                +{(targetBiohazardRatio - currentStats.yellowTargetRatioPercent).toFixed(1)}% vs Cap
               </span>
             </div>
-            <div className="text-3xl font-bold text-amber-700 tracking-tight font-mono flex items-baseline gap-2">
-              {currentStats.yellowBiohazardRatioPercent}%
+            <div className="text-4xl sm:text-4xl lg:text-[2.65rem] font-bold text-amber-700 tracking-tight font-mono flex items-baseline gap-2">
+              <span className={isBioPulsing ? "text-amber-800 transition-colors" : "transition-colors"}>
+                {targetBiohazardRatio}%
+              </span>
               <span className="text-xs font-normal text-slate-500 font-sans">Target: 25.0%</span>
             </div>
-            <div className="mt-3 w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-              <div className="bg-amber-500 h-full rounded-full" style={{ width: `${currentStats.yellowBiohazardRatioPercent}%` }} />
+            <div className="mt-3.5 w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+              <div className="bg-amber-500 h-full rounded-full transition-all duration-500" style={{ width: `${targetBiohazardRatio}%` }} />
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500">
+          <div className="mt-4 pt-3.5 border-t border-slate-100 text-xs text-slate-500 leading-normal">
             <span>Clinical Target: &lt; 25.0% yellow bin ratio</span>
           </div>
         </div>
 
-        {/* Card 3: Cost Loss */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[145px]">
+        {/* Card 3: Cost Loss (Rolls 2 times in 10s) */}
+        <div className={`bg-white p-6 rounded-xl border shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all duration-300 ${
+          isCostPulsing ? "border-red-400 ring-2 ring-red-500/20" : "border-slate-200"
+        }`}>
           <div>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
-                Misclassification Cost Loss
+            <div className="flex items-center justify-between gap-1.5 mb-3">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[120px]">
+                Cost Leak Loss
               </span>
-              <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-red-50 text-red-800 border border-red-200">
-                <ArrowUpRight className="w-3.5 h-3.5" /> Budget Leak
+              <span className="inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-50 text-red-800 border border-red-200">
+                <ArrowUpRight className="w-3.5 h-3.5 shrink-0" /> Budget Leak
               </span>
             </div>
-            <div className="text-3xl font-bold text-red-700 tracking-tight font-mono">
-              {formatCurrencyAUD(currentStats.misclassificationCostLossAUD)}
+            <div className="text-4xl sm:text-4xl lg:text-[2.65rem] font-bold text-red-700 tracking-tight font-mono">
+              <AnimatedCounter 
+                value={targetCostLossAUD}
+                duration={700}
+                formatter={(v) => formatCurrencyAUD(v)}
+                className={isCostPulsing ? "text-red-800 transition-colors" : "transition-colors"}
+              />
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 leading-normal">
             <span>Incineration Diff:</span>
             <span className="font-mono font-bold text-slate-800">$3.50 vs $0.35/kg</span>
           </div>
         </div>
 
         {/* Card 4: Scope 3 Carbon */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[145px]">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-full min-h-[175px] overflow-hidden transition-all">
           <div>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">
-                Scope 3 Carbon Abated
+            <div className="flex items-center justify-between gap-1.5 mb-3">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[120px]">
+                Scope 3 Carbon
               </span>
-              <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                <Leaf className="w-3.5 h-3.5 mr-0.5" /> ESG Metric
+              <span className="inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <Leaf className="w-3.5 h-3.5 mr-0.5 shrink-0" /> ESG Metric
               </span>
             </div>
-            <div className="text-3xl font-bold text-emerald-700 tracking-tight font-mono">
-              {currentStats.scope3CarbonSavedTonnes} <span className="text-base font-normal text-slate-500">tCO₂-e</span>
+            <div className="text-4xl sm:text-4xl lg:text-[2.65rem] font-bold text-emerald-700 tracking-tight font-mono flex items-baseline gap-1.5">
+              {currentStats.scope3CarbonSavedTonnes} <span className="text-lg font-normal text-slate-500 font-sans">tCO₂-e</span>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 leading-normal">
             <span>Protocol:</span>
             <span className="font-semibold text-slate-800">Clean Packaging Diversion</span>
           </div>
         </div>
       </div>
 
-      {/* 3. Dynamic Sliced Time-Series Chart + Progressive Disclosure */}
+      {/* 3. Dynamic Sliced Time-Series Chart + Top 3 Department Focus */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: Monthly Trend Sliced Chart */}
         <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
@@ -237,7 +308,7 @@ export default function OverviewPage() {
                   </div>
                   <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                     <div 
-                      className={`h-full rounded-full ${item.bioRatio > 45 ? "bg-red-500" : "bg-amber-500"}`}
+                      className={`h-full rounded-full ${item.bioRatio > 45 ? "bg-red-500" : item.bioRatio > 25 ? "bg-amber-500" : "bg-emerald-500"}`}
                       style={{ width: `${item.bioRatio}%` }}
                     />
                   </div>

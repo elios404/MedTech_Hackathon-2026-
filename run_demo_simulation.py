@@ -4,6 +4,7 @@ import os
 import random
 import time
 from pathlib import Path
+from typing import Tuple
 import cv2
 import numpy as np
 
@@ -38,45 +39,36 @@ SAMPLE_MAPPING = {
 }
 
 
-def load_diverse_demo_samples(num_per_cat=5):
-    # Check bundled demo samples first
+def load_diverse_demo_samples():
+    """Load all available high-quality demo samples from assets/demo_samples."""
     bundled_samples_dir = BASE_DIR / "assets" / "demo_samples"
     if bundled_samples_dir.exists() and any(bundled_samples_dir.iterdir()):
         samples = []
-        for cat_dir in bundled_samples_dir.iterdir():
+        for cat_dir in sorted(bundled_samples_dir.iterdir()):
             if cat_dir.is_dir():
                 cat_name = cat_dir.name
                 imgs = list(cat_dir.glob("*.jpg")) + list(cat_dir.glob("*.png")) + list(cat_dir.glob("*.jpeg"))
                 for img in imgs:
                     samples.append((cat_name, cat_name, img))
         if samples:
-            random.shuffle(samples)
             return samples
 
     # Fallback to data/photos
     photos_dir = BASE_DIR / "data" / "photos"
     samples = []
-
     for cat, subfolders in SAMPLE_MAPPING.items():
-        cat_samples = []
         for folder in subfolders:
             folder_p = photos_dir / folder
             if folder_p.exists():
                 imgs = list(folder_p.glob("*.jpg")) + list(folder_p.glob("*.png")) + list(folder_p.glob("*.jpeg"))
                 if imgs:
-                    cat_samples.append((cat, folder, random.choice(imgs)))
-
-        if len(cat_samples) > num_per_cat:
-            cat_samples = random.sample(cat_samples, num_per_cat)
-
-        samples.extend(cat_samples)
-
-    random.shuffle(samples)
+                    for img in imgs[:5]:
+                        samples.append((cat, folder, img))
     return samples
 
 
-def create_chute_canvas_with_image(img_path: Path) -> np.ndarray:
-    canvas = np.full((FRAME_HEIGHT, FRAME_WIDTH, 3), 45, dtype=np.uint8)
+def create_chute_canvas_with_image(img_path: Path) -> Tuple[np.ndarray, Tuple[int, int, int, int]]:
+    canvas = np.full((FRAME_HEIGHT, FRAME_WIDTH, 3), 40, dtype=np.uint8)
 
     rx1, ry1, rx2, ry2 = ROI_COORDS
     rw = rx2 - rx1
@@ -84,10 +76,10 @@ def create_chute_canvas_with_image(img_path: Path) -> np.ndarray:
 
     img = cv2.imread(str(img_path))
     if img is None:
-        return canvas
+        return canvas, (rx1 + 20, ry1 + 20, rx2 - 20, ry2 - 20)
 
     ih, iw = img.shape[:2]
-    scale = min((rw - 30) / iw, (rh - 30) / rh)
+    scale = min((rw - 60) / iw, (rh - 60) / rh)
     nw, nh = int(iw * scale), int(ih * scale)
     resized = cv2.resize(img, (nw, nh), interpolation=cv2.INTER_AREA)
 
@@ -95,26 +87,28 @@ def create_chute_canvas_with_image(img_path: Path) -> np.ndarray:
     cy = ry1 + (rh - nh) // 2
 
     canvas[cy:cy + nh, cx:cx + nw] = resized
-    return canvas
+    bbox = (cx, cy, cx + nw, cy + nh)
+    return canvas, bbox
 
 
 def main():
-    print("\n" + "=" * 70)
+    print("\n" + "=" * 75)
     print("      SURGIWASTE AI - INTERACTIVE IMAGE INSPECTION DEMO      ")
-    print("=" * 70)
+    print("=" * 75)
     print("  Controls:")
-    print("    [SPACE] or [N] : Next Photo")
+    print("    [SPACE] or [N] : Next Photo (2-Blink Lock-On Animation)")
     print("    [P]            : Previous Photo")
-    print("    [1]            : Switch Target Bin to Yellow_Biohazard (Cost Leak)")
-    print("    [2]            : Switch Target Bin to General_Recycle")
+    print("    [M]            : Toggle Mode (3-Stream Standard <-> 4-Class Detailed)")
+    print("    [1]            : Switch Target Bin to Yellow_Biohazard (Infectious)")
+    print("    [2]            : Switch Target Bin to General_Recycle (Clean Packaging)")
     print("    [3]            : Switch Target Bin to Sharps_Container")
     print("    [D]            : Drop Item (Trigger Event & Log to data/events.jsonl)")
     print("    [Q] or [ESC]   : Exit Demo")
-    print("=" * 70 + "\n")
+    print("=" * 75 + "\n")
 
-    samples = load_diverse_demo_samples(num_per_cat=5)
+    samples = load_diverse_demo_samples()
     if not samples:
-        print("[Error] No sample images found in data/photos")
+        print("[Error] No sample images found in assets/demo_samples or data/photos")
         return
 
     detector = WasteDetector()
@@ -124,41 +118,73 @@ def main():
 
     current_idx = 0
     last_event = None
+    switch_timestamp = time.time()
+    display_mode = "3_CLASS"  # Default: 3-Stream Standard (General_Waste, Biohazard, Sharps)
+
+    # Pre-load initial sample
+    cat_gt, folder_name, img_path = samples[current_idx]
+    frame, item_bbox = create_chute_canvas_with_image(img_path)
+    inference = detector.detect_in_roi(frame, ROI_COORDS, explicit_bbox=item_bbox)
 
     while True:
-        cat_gt, folder_name, img_path = samples[current_idx]
-        frame = create_chute_canvas_with_image(img_path)
+        elapsed = time.time() - switch_timestamp
 
-        # Detect
-        inference = detector.detect_in_roi(frame, ROI_COORDS)
+        # 2-Blink Lock-On Animation:
+        if elapsed < 0.18:
+            show_bbox = True
+        elif elapsed < 0.32:
+            show_bbox = False
+        elif elapsed < 0.50:
+            show_bbox = True
+        elif elapsed < 0.64:
+            show_bbox = False
+        else:
+            show_bbox = True
 
-        # Render HUD
+        # Render HUD with dynamic blink and display mode
         vis = visualizer.draw_hud(
             frame=frame,
             inference=inference,
             last_event=last_event,
-            fps=0.0,
+            fps=30.0 if elapsed >= 0.64 else 60.0,
             target_bin=tracker.target_bin,
+            show_bbox=show_bbox,
+            is_locked_on=(elapsed >= 0.64),
+            display_mode=display_mode,
         )
 
         # Top Bar Info
         cv2.rectangle(vis, (0, 0), (FRAME_WIDTH, 35), (25, 25, 25), -1)
-        info_text = f"Sample [{current_idx + 1}/{len(samples)}] | Folder: {folder_name} | GT: {cat_gt}"
+        status_tag = "LOCKED-ON" if elapsed >= 0.64 else "DETECTING..."
+        mode_tag = "3-Stream" if display_mode == "3_CLASS" else "4-Class"
+        info_text = f"[{current_idx + 1}/{len(samples)}] {folder_name} | GT: {cat_gt} | Mode: [{mode_tag}] | AI: {status_tag}"
         cv2.putText(vis, info_text, (15, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1, cv2.LINE_AA)
 
         # Bottom Hint
-        hint_text = "[SPACE] Next | [P] Prev | [D] Drop to Bin & Log | [1,2,3] Bin | [Q] Quit"
+        hint_text = "[SPACE] Next | [P] Prev | [M] Mode Toggle | [D] Drop | [1,2,3] Bin | [Q] Quit"
         cv2.putText(vis, hint_text, (15, FRAME_HEIGHT - 45), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1, cv2.LINE_AA)
 
         cv2.imshow("SurgiWaste AI - Static Image Inspection", vis)
-        key = cv2.waitKey(0) & 0xFF
+        key = cv2.waitKey(25) & 0xFF
 
         if key in [ord("q"), 27]:
             break
         elif key in [ord(" "), ord("n"), 83]:
             current_idx = (current_idx + 1) % len(samples)
+            cat_gt, folder_name, img_path = samples[current_idx]
+            frame, item_bbox = create_chute_canvas_with_image(img_path)
+            inference = detector.detect_in_roi(frame, ROI_COORDS, explicit_bbox=item_bbox)
+            switch_timestamp = time.time()
         elif key in [ord("p"), 81]:
             current_idx = (current_idx - 1 + len(samples)) % len(samples)
+            cat_gt, folder_name, img_path = samples[current_idx]
+            frame, item_bbox = create_chute_canvas_with_image(img_path)
+            inference = detector.detect_in_roi(frame, ROI_COORDS, explicit_bbox=item_bbox)
+            switch_timestamp = time.time()
+        elif key in [ord("m"), ord("M")]:
+            display_mode = "4_CLASS" if display_mode == "3_CLASS" else "3_CLASS"
+            mode_name = "3-Stream Standard (General_Waste)" if display_mode == "3_CLASS" else "4-Class Detailed (Plastic/Paper separated)"
+            print(f"\n[Classification Mode] Toggled to -> {mode_name}")
         elif key == ord("1"):
             tracker.target_bin = TargetBinType.YELLOW_BIOHAZARD
             print("\n[Target Bin] Switched to -> Yellow_Biohazard (Infectious Bin)")

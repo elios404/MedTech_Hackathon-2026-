@@ -37,6 +37,24 @@ class WasteDetector:
         self.model = YOLO(str(target_model))
         self.is_classifier = hasattr(self.model, "names") and not hasattr(self.model, "set_classes")
 
+    def _is_empty_or_blank(self, roi_crop: np.ndarray) -> bool:
+        """Determines if the ROI contains no physical object (e.g. solid white/black/empty chute)."""
+        if roi_crop.size == 0:
+            return True
+
+        gray = cv2.cvtColor(roi_crop, cv2.COLOR_BGR2GRAY)
+        std_dev = float(np.std(gray))
+
+        # Check edge density via Canny
+        edges = cv2.Canny(gray, 40, 120)
+        edge_count = cv2.countNonZero(edges)
+
+        # If variance is very low (< 14.0) or edge count is negligible, it's a blank background
+        if std_dev < 14.0 or edge_count < 120:
+            return True
+
+        return False
+
     def _check_red_contamination(self, roi_crop: np.ndarray) -> Tuple[bool, float]:
         """Calculates ratio of red pixels (indicating blood/biohazard) in HSV color space."""
         if roi_crop.size == 0:
@@ -57,6 +75,7 @@ class WasteDetector:
         self,
         frame: np.ndarray,
         roi_coords: Tuple[int, int, int, int],
+        explicit_bbox: Optional[Tuple[int, int, int, int]] = None,
     ) -> Optional[InferenceResult]:
         """Performs classification and contamination analysis on the ROI region."""
         x1, y1, x2, y2 = roi_coords
@@ -65,10 +84,14 @@ class WasteDetector:
         if roi_crop.size == 0:
             return None
 
-        # 1. Color Contamination Check (Blood / Infectious)
+        # 1. Blank / Empty Chute Saliency Check (Prevents false mapping on empty/white frames)
+        if self._is_empty_or_blank(roi_crop):
+            return None
+
+        # 2. Color Contamination Check (Blood / Infectious)
         is_red, red_ratio = self._check_red_contamination(roi_crop)
 
-        # 2. Custom Fine-tuned Classifier Model
+        # 3. Custom Fine-tuned Classifier Model
         if self.is_classifier:
             results = self.model(roi_crop, verbose=False)
             if not results or results[0].probs is None:
@@ -78,19 +101,35 @@ class WasteDetector:
             top1_conf = float(results[0].probs.top1conf.cpu().numpy())
             class_name = results[0].names[top1_idx]
 
-            # Bounding Box Estimation via Contour/Saliency
-            gray = cv2.cvtColor(roi_crop, cv2.COLOR_BGR2GRAY)
-            blurred = cv2.GaussianBlur(gray, (7, 7), 0)
-            _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-            contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            # Reject low-confidence ambiguous inferences (< 55%)
+            if top1_conf < 0.55:
+                return None
 
-            bbox = [x1 + 10, y1 + 10, x2 - 10, y2 - 10]
-            if contours:
-                valid_contours = [c for c in contours if cv2.contourArea(c) > MIN_CONTOUR_AREA]
-                if valid_contours:
-                    largest = max(valid_contours, key=cv2.contourArea)
-                    bx, by, bw, bh = cv2.boundingRect(largest)
-                    bbox = [x1 + bx, y1 + by, x1 + bx + bw, y1 + by + bh]
+            # Bounding Box
+            if explicit_bbox is not None:
+                bbox = list(explicit_bbox)
+            else:
+                gray = cv2.cvtColor(roi_crop, cv2.COLOR_BGR2GRAY)
+                bg_val = np.median(gray)
+                diff = cv2.absdiff(gray, int(bg_val))
+                _, thresh = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
+                contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+                if contours:
+                    valid_c = [c for c in contours if cv2.contourArea(c) > 400]
+                    if valid_c:
+                        largest = max(valid_c, key=cv2.contourArea)
+                        bx, by, bw, bh = cv2.boundingRect(largest)
+                        pad = 6
+                        bx1 = max(x1, x1 + bx - pad)
+                        by1 = max(y1, y1 + by - pad)
+                        bx2 = min(x2, x1 + bx + bw + pad)
+                        by2 = min(y2, y1 + by + bh + pad)
+                        bbox = [bx1, by1, bx2, by2]
+                    else:
+                        bbox = [x1 + 15, y1 + 15, x2 - 15, y2 - 15]
+                else:
+                    bbox = [x1 + 15, y1 + 15, x2 - 15, y2 - 15]
 
             # Map to MaterialCategory enum
             category_mapping = {
@@ -115,7 +154,7 @@ class WasteDetector:
                 label=class_name,
             )
 
-        # 3. Fallback: YOLO-World Object Detection
+        # 4. Fallback: YOLO-World Object Detection
         results = self.model(roi_crop, conf=self.conf_thresh, verbose=False)
         if not results or len(results[0].boxes) == 0:
             return None
