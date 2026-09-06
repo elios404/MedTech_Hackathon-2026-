@@ -1,3 +1,5 @@
+"SCRUM-17 Implement front-end designs and layout" -> Jira Practice
+
 # SurgiWaste AI — Hospital Operating Theatre Waste Intelligence Infrastructure
 
 > **Enterprise AI Infrastructure for Operating Theatre Waste Diversion, Physical Bag Logistics Audit, and Scope 3 ESG Intelligence.**  
